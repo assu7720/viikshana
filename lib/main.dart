@@ -1,16 +1,7 @@
 import 'package:flutter/material.dart';
-import 'bootstrap/bootstrap.dart';
+import 'app/viikshana_app.dart';
 
-void main() async {
-  await bootstrap();
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const ViikshanaApp());
-}
-
-class ViikshanaApp extends StatelessWidget {
-  const ViikshanaApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
-  }
 }
