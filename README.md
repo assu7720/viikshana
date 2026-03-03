@@ -27,6 +27,21 @@ flutter pub get
 flutter run --dart-define=VIIKSHANA_API_BASE_URL=
 ```
 
+### Android TV emulator
+
+Flutter marks the AOSP TV emulator as unsupported, so use **build APK + adb install**:
+
+1. Start your TV emulator (e.g. AOSP TV on x86 — `emulator-5558`).
+2. Build and install:
+```bash
+flutter build apk --debug
+adb -s emulator-5558 install build/app/outputs/flutter-apk/app-debug.apk
+adb -s emulator-5558 shell am start -n com.example.viikshana/.MainActivity
+```
+3. Use the emulator's D-pad/remote to move focus and select items (sidebar, etc.).
+
+To find your TV device id: `flutter devices` or `adb devices`.
+
 ## Testing
 
 ```bash
