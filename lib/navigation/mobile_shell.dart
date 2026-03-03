@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:viikshana/core/providers/player_providers.dart';
 import 'package:viikshana/screens/home/home_screen.dart';
 import 'package:viikshana/screens/clips/clips_screen.dart';
 import 'package:viikshana/screens/upload/upload_screen.dart';
@@ -53,22 +55,19 @@ extension MobileTabExtension on MobileTab {
   }
 }
 
-class MobileShell extends StatefulWidget {
+class MobileShell extends ConsumerStatefulWidget {
   const MobileShell({super.key});
 
   @override
-  State<MobileShell> createState() => _MobileShellState();
+  ConsumerState<MobileShell> createState() => _MobileShellState();
 }
 
-class _MobileShellState extends State<MobileShell> {
+class _MobileShellState extends ConsumerState<MobileShell> {
   int _currentIndex = 0;
   final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
     5,
     (_) => GlobalKey<NavigatorState>(),
   );
-
-  /// Stub: set to true when in full-screen playback to hide bottom nav.
-  static bool get _hideBottomNavForFullScreen => false;
 
   static final List<Widget> _tabRoots = [
     const HomeScreen(),
@@ -89,12 +88,14 @@ class _MobileShellState extends State<MobileShell> {
 
   @override
   Widget build(BuildContext context) {
+    final hideBottomNav = ref.watch(fullScreenPlayerProvider);
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: List.generate(5, _buildNavigator),
       ),
-      bottomNavigationBar: _hideBottomNavForFullScreen
+      bottomNavigationBar: hideBottomNav
           ? null
           : NavigationBar(
               selectedIndex: _currentIndex,

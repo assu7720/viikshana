@@ -1,14 +1,20 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'app/viikshana_app.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:viikshana/app/viikshana_app.dart';
+import 'package:viikshana/core/watch_history/watch_history_repository.dart';
+import 'package:viikshana/data/hive/watch_history_adapter.dart';
 
-void main() {
-  // Keep bindings and runApp in the same zone to avoid "Zone mismatch".
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
+  Hive.registerAdapter(WatchHistoryEntryAdapter());
+  await initWatchHistoryBox();
+
   runZonedGuarded<void>(
     () {
-      WidgetsFlutterBinding.ensureInitialized();
-
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
         if (kDebugMode) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:viikshana/core/providers/home_feed_provider.dart';
+import 'package:viikshana/screens/player/player_screen.dart';
 import 'package:viikshana/shared/components/video_card.dart';
 import 'package:viikshana/shared/tokens/viikshana_spacing.dart';
 
@@ -58,7 +59,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(homeFeedProvider);
-    final columns = _crossAxisCount(MediaQuery.sizeOf(context).width);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
@@ -121,7 +121,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                               ? VideoCard(
                                                   video: state.items[index],
                                                   onTap: () {
-                                                    // M6: navigate to player
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute<void>(
+                                                        builder: (_) =>
+                                                            PlayerScreen(
+                                                          videoId:
+                                                              state.items[index]
+                                                                  .id,
+                                                        ),
+                                                      ),
+                                                    );
                                                   },
                                                 )
                                               : const SizedBox.shrink(),

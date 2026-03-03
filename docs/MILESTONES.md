@@ -11,7 +11,7 @@ This file defines the build milestones and the gating protocol between Agent 1 (
 | M3 — Android TV Navigation Shell | **DONE** |
 | M4 — API Client + Models | **DONE** |
 | M5 — Home Screen (Anonymous) | **DONE** |
-| M6 — Video Player Core | Next |
+| M6 — Video Player Core | **DONE** |
 | M7–M11 | Pending |
 
 ## Gating Protocol (MANDATORY)
@@ -98,6 +98,7 @@ Acceptance:
 - flutter analyze/test green
 
 ### M6 — Video Player Core
+**Status: DONE**
 Deliverables:
 - HLS playback (.m3u8)
 - Fullscreen + basic controls

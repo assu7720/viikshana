@@ -44,8 +44,17 @@ class ApiClient {
 
   /// GET /videos/{id}.
   /// Non-blocking: throws [ApiException] on failure.
+  /// When [ApiConfig.isMock] is true, returns a stub detail with a sample HLS URL for playback testing.
   Future<VideoDetail> getVideo(String id) async {
     if (id.isEmpty) throw ApiException('Video id is required');
+    if (_config.isMock) {
+      if (kDebugMode) debugPrint('[API] getVideo (mock): no network call');
+      return VideoDetail(
+        id: id,
+        title: 'Sample (mock)',
+        hlsUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+      );
+    }
     final uri = _config.videoUrl(id);
     if (kDebugMode) debugPrint('[API] OUTGOING: GET $uri');
     final response = await _request(() => _client.get(uri));
