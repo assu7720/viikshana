@@ -1,6 +1,6 @@
 /// Base URL and config for the ClipsNow API.
-/// Override [baseUrl] in tests or via --dart-define=VIIKSHANA_API_BASE_URL= for mock (empty feed).
-/// For Android emulator: use http://10.0.2.2:3000 (not localhost — emulator's localhost is the device).
+/// Default [baseUrl] is https://viikshana.com for all devices.
+/// Override in tests via --dart-define=VIIKSHANA_API_BASE_URL= (use empty string for mock/empty feed).
 ///
 /// Video thumbnails and video files (HLS, etc.) are served from [mediaBaseUrl].
 class ApiConfig {
@@ -11,8 +11,8 @@ class ApiConfig {
               defaultValue: _defaultBaseUrl,
             );
 
-  /// Default when no dart-define is set. Use 10.0.2.2 for Android emulator to reach host's localhost.
-  static const String _defaultBaseUrl = 'http://10.0.2.2:3000';
+  /// Default when no dart-define is set. Production API for all devices.
+  static const String _defaultBaseUrl = 'https://viikshana.com';
 
   /// Base URL for video thumbnails and video files (HLS, MP4). All media assets are served from this host.
   static const String mediaBaseUrl = 'https://videoprocess.viikshana.com';

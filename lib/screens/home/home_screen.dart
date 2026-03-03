@@ -40,7 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   static int _crossAxisCount(double width) {
-    if (width >= 900) return 5;
+    if (width >= 1200) return 5;
     if (width >= 600) return 3;
     return 1;
   }
