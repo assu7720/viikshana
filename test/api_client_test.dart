@@ -27,6 +27,28 @@ void main() {
       final uri = config.videoUrl('vid-123');
       expect(uri.path, '/videos/vid-123');
     });
+
+    test('resolveMediaUrl returns full URL unchanged', () {
+      const full = 'https://videoprocess.viikshana.com/processed/abc/thumb.jpg';
+      expect(ApiConfig.resolveMediaUrl(full), full);
+      expect(ApiConfig.resolveMediaUrl('http://other.com/x'), 'http://other.com/x');
+    });
+
+    test('resolveMediaUrl prepends mediaBaseUrl for relative path', () {
+      expect(
+        ApiConfig.resolveMediaUrl('/processed/xyz/thumb.jpg'),
+        'https://videoprocess.viikshana.com/processed/xyz/thumb.jpg',
+      );
+      expect(
+        ApiConfig.resolveMediaUrl('processed/rel.jpg'),
+        'https://videoprocess.viikshana.com/processed/rel.jpg',
+      );
+    });
+
+    test('resolveMediaUrl returns empty for null or empty', () {
+      expect(ApiConfig.resolveMediaUrl(null), '');
+      expect(ApiConfig.resolveMediaUrl(''), '');
+    });
   });
 
   group('ApiClient', () {

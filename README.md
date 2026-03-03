@@ -4,9 +4,9 @@ A new Flutter project.
 
 ## Running the app
 
-**With a real API** (requires `https://viikshana.com` reachable):
+**With a real API** (e.g. production):
 ```bash
-flutter run
+flutter run --dart-define=VIIKSHANA_API_BASE_URL=https://api.viikshana.com
 ```
 
 **Without the API** (e.g. local dev, no backend) — use an empty home feed:
@@ -14,11 +14,11 @@ flutter run
 flutter run --dart-define=VIIKSHANA_API_BASE_URL=
 ```
 
-**Local backend on your PC + Android emulator** — On the emulator, `localhost` is the device, not your PC. Point to your machine with:
+**Local backend on your PC + Android emulator** — On the emulator, `localhost` is the device, not your PC. Use your host machine's address:
 ```bash
-flutter run --dart-define=VIIKSHANA_API_BASE_URL=https://viikshana.com
+flutter run --dart-define=VIIKSHANA_API_BASE_URL=http://10.0.2.2:3000
 ```
-(Replace `3000` with your backend port. Use `10.0.2.2` for Android emulator; for a real device use your PC’s LAN IP, e.g. `http://192.168.1.5:3000`.)
+(Replace `3000` with your backend port. For a real device on the same LAN, use your PC IP, e.g. `http://192.168.1.5:3000`.)
 
 **If bottom nav icons show as broken boxes**, do a clean build so the Material font is included:
 ```bash

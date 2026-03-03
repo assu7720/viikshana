@@ -7,7 +7,7 @@
 
 | Requirement (MILESTONES.md / REQUIREMENTS.md) | Implementation | Status |
 |---------------------------------------------|----------------|--------|
-| Responsive grid (phone/tablet) | `HomeScreen._crossAxisCount`: width ≥900→6, ≥600→4, ≥400→3, else 2 | ✓ |
+| Responsive grid (phone/tablet) | `HomeScreen._crossAxisCount`: width ≥900→5, ≥600→3, else 1 (single column on phone) | ✓ |
 | Infinite scroll using /videos/home | `HomeFeedNotifier` uses `getHomeFeed(page, limit)`, `loadMore()` when &lt;200px from bottom | ✓ |
 | Video card component | `VideoCard`: thumbnail (16:9), title, channel, views (K/M format) | ✓ |
 | Loads home feed, scroll works | `loadInitial()` in initState; GridView.builder with `itemCount` + loading footer when `hasMore` | ✓ |
@@ -31,5 +31,5 @@
 
 ## How to re-check
 
-- `flutter analyze` — may report pre-existing issues (theme URIs, deprecated `window`/physicalSize in tests).
-- `flutter test` — all tests must pass (79 as of 2025-03-03).
+- `flutter analyze` — should report no issues.
+- `flutter test` — all tests must pass (84 as of this update).

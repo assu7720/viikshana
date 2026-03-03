@@ -6,17 +6,13 @@ enum AppPlatform { androidMobile, iosMobile, tablet, tv }
 class PlatformInfo {
   /// Test-only override. When non-null, [resolve] returns this instead of computing.
   /// Set to null in tearDown to avoid affecting other tests.
-  static AppPlatform? _overrideForTesting;
-  static set overrideForTesting(AppPlatform? value) {
-    _overrideForTesting = value;
-  }
-  static AppPlatform? get overrideForTesting => _overrideForTesting;
+  static AppPlatform? overrideForTesting;
 
   static AppPlatform resolve({
     required double shortestSide,
     required double width,
   }) {
-    if (_overrideForTesting != null) return _overrideForTesting!;
+    if (overrideForTesting != null) return overrideForTesting!;
 
     // TV heuristic: Android + very large width (tune later)
     if (!kIsWeb && Platform.isAndroid && width >= 960) return AppPlatform.tv;

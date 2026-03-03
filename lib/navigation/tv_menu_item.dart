@@ -59,7 +59,7 @@ class _TvMenuItemState extends State<TvMenuItem> {
             duration: const Duration(milliseconds: 150),
             decoration: BoxDecoration(
               color: hasFocus
-                  ? ViikshanaColors.brandOrange.withOpacity(0.2)
+                  ? ViikshanaColors.brandOrange.withValues(alpha: 0.2)
                   : (widget.selected
                       ? ViikshanaColors.surfaceDark
                       : Colors.transparent),

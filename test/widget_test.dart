@@ -90,10 +90,11 @@ void main() {
       PlatformInfo.overrideForTesting = null;
     });
 
-    testWidgets('Android mobile viewport shows MobileShell with bottom nav', (WidgetTester tester) async {
+    // All 5 device types (Android mobile, iOS mobile, Android tablet, iPad, Android TV)
+    testWidgets('(1/5) Android mobile: correct shell and nav', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.androidMobile;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(360, 640);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(360, 640);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -103,10 +104,10 @@ void main() {
       expect(find.byType(TvShell), findsNothing);
     });
 
-    testWidgets('iOS mobile viewport shows MobileShell with bottom nav', (WidgetTester tester) async {
+    testWidgets('(2/5) iOS mobile: correct shell and nav', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.iosMobile;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(390, 844);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(390, 844);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -116,10 +117,10 @@ void main() {
       expect(find.byType(TvShell), findsNothing);
     });
 
-    testWidgets('Android tablet viewport shows MobileShell (not TV)', (WidgetTester tester) async {
+    testWidgets('(3/5) Android tablet: correct shell and nav', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.tablet;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(1024, 768);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(1024, 768);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -129,10 +130,10 @@ void main() {
       expect(find.byType(TvShell), findsNothing);
     });
 
-    testWidgets('iPad viewport shows MobileShell (tablet shell)', (WidgetTester tester) async {
+    testWidgets('(4/5) iPad: correct shell and nav', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.tablet;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(1024, 1366);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(1024, 1366);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -142,10 +143,10 @@ void main() {
       expect(find.text('Home'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('Android TV viewport shows TvShell with sidebar (no bottom nav)', (WidgetTester tester) async {
+    testWidgets('(5/5) Android TV: correct shell and nav (no bottom nav)', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.tv;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(1920, 1080);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(1920, 1080);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -159,8 +160,8 @@ void main() {
 
     testWidgets('Android TV shows 11 sidebar items and no Upload', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.tv;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(1920, 1080);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(1920, 1080);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -178,8 +179,8 @@ void main() {
 
     testWidgets('Android mobile has 5 tabs (Home, Clips, Upload, Search, Account)', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.androidMobile;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(360, 640);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(360, 640);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -425,10 +426,11 @@ void main() {
       PlatformInfo.overrideForTesting = null;
     });
 
-    testWidgets('Android mobile: Home shows grid and feed', (WidgetTester tester) async {
+    // All 5 device types: Home content (grid or empty) on mobile/tablet, placeholder on TV
+    testWidgets('(1/5) Android mobile: Home shows grid and feed', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.androidMobile;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(360, 640);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(360, 640);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -442,10 +444,10 @@ void main() {
       expect(find.text('Home'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('iOS mobile: Home shows grid and feed', (WidgetTester tester) async {
+    testWidgets('(2/5) iOS mobile: Home shows grid and feed', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.iosMobile;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(390, 844);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(390, 844);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -459,10 +461,10 @@ void main() {
       expect(find.text('Home'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('Android tablet: Home shows grid and feed', (WidgetTester tester) async {
+    testWidgets('(3/5) Android tablet: Home shows grid and feed', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.tablet;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(1024, 768);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(1024, 768);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -476,10 +478,10 @@ void main() {
       expect(find.text('Home'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('iPad: Home shows grid and feed', (WidgetTester tester) async {
+    testWidgets('(4/5) iPad: Home shows grid and feed', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.tablet;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(1024, 1366);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(1024, 1366);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();
@@ -493,10 +495,10 @@ void main() {
       expect(find.text('Home'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('Android TV: Home menu shows placeholder content (no grid)', (WidgetTester tester) async {
+    testWidgets('(5/5) Android TV: Home menu shows placeholder content (no grid)', (WidgetTester tester) async {
       PlatformInfo.overrideForTesting = AppPlatform.tv;
-      addTearDown(() => tester.binding.window.clearPhysicalSizeTestValue());
-      tester.binding.window.physicalSizeTestValue = const Size(1920, 1080);
+      addTearDown(() => tester.view.resetPhysicalSize());
+      tester.view.physicalSize = const Size(1920, 1080);
 
       await tester.pumpWidget(ViikshanaApp(overrides: kMockApiOverrides));
       await tester.pumpAndSettle();

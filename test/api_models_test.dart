@@ -64,6 +64,18 @@ void main() {
       expect(back.thumbnailUrl, item.thumbnailUrl);
       expect(back.viewCount, item.viewCount);
     });
+
+    test('resolves relative thumbnail with media base URL', () {
+      final item = VideoItem.fromJson({
+        'id': 'v1',
+        'title': 'T',
+        'thumbnail': '/processed/abc/thumbnail.jpg',
+      });
+      expect(
+        item.thumbnailUrl,
+        'https://videoprocess.viikshana.com/processed/abc/thumbnail.jpg',
+      );
+    });
   });
 
   group('ChannelMetadata.fromJson', () {
