@@ -14,8 +14,8 @@ class PlatformInfo {
   }) {
     if (overrideForTesting != null) return overrideForTesting!;
 
-    // TV heuristic: Android + very large width (tune later)
-    if (!kIsWeb && Platform.isAndroid && width >= 960) return AppPlatform.tv;
+    // TV: Android only, large width (10-foot UI). Tablets in landscape often 960–1280; use 1920 so they get MobileShell + home feed.
+    if (!kIsWeb && Platform.isAndroid && width >= 1920) return AppPlatform.tv;
 
     // Tablet heuristic: shortestSide >= 600dp
     if (shortestSide >= 600) return AppPlatform.tablet;

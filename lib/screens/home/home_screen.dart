@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:viikshana/core/providers/home_feed_provider.dart';
 import 'package:viikshana/shared/components/video_card.dart';
+import 'package:viikshana/shared/tokens/viikshana_spacing.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +45,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return 1;
   }
 
+  /// Card content height from card width: 16:9 thumbnail + padding + 2-line title + xs + 1-line meta.
+  static double _cardHeightForWidth(double cardWidth) {
+    const paddingVertical = ViikshanaSpacing.sm * 2; // 16
+    const titleHeight = 34.0; // ~2 lines titleSmall
+    const metaHeight = 14.0; // 1 line bodySmall
+    const gap = 4.0; // xs
+    const bottomBuffer = 14.0; // avoid text overflow on some titles
+    return cardWidth * (9 / 16) + paddingVertical + titleHeight + gap + metaHeight + bottomBuffer;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(homeFeedProvider);
@@ -67,34 +78,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : state.items.isEmpty
                       ? _EmptyView()
-                      : GridView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        childAspectRatio: columns == 1 ? 1.28 : 0.72,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: state.items.length +
-                          (state.hasMore && state.items.isNotEmpty ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index >= state.items.length) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-                        return VideoCard(
-                          video: state.items[index],
-                          onTap: () {
-                            // M6: navigate to player
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            const padding = 12.0;
+                            const spacing = 12.0;
+                            final columns = _crossAxisCount(constraints.maxWidth);
+                            final contentWidth = constraints.maxWidth - padding * 2;
+                            final cardWidth = (contentWidth - (columns - 1) * spacing) / columns;
+                            final cardHeight = _cardHeightForWidth(cardWidth);
+                            final rowHeight = cardHeight + spacing;
+                            final rowCount = (state.items.length / columns).ceil();
+                            final hasLoader = state.hasMore && state.items.isNotEmpty;
+
+                            return ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(horizontal: padding, vertical: padding),
+                              itemCount: rowCount + (hasLoader ? 1 : 0),
+                              itemBuilder: (context, rowIndex) {
+                                if (rowIndex >= rowCount) {
+                                  return SizedBox(
+                                    height: 80,
+                                    child: Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return SizedBox(
+                                  height: rowHeight,
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: List.generate(columns, (col) {
+                                      final index = rowIndex * columns + col;
+                                      return Padding(
+                                        padding: EdgeInsets.only(right: col < columns - 1 ? spacing : 0),
+                                        child: SizedBox(
+                                          width: cardWidth,
+                                          height: cardHeight,
+                                          child: index < state.items.length
+                                              ? VideoCard(
+                                                  video: state.items[index],
+                                                  onTap: () {
+                                                    // M6: navigate to player
+                                                  },
+                                                )
+                                              : const SizedBox.shrink(),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                );
+                              },
+                            );
                           },
-                        );
-                      },
-                    ),
+                        ),
             ),
     );
   }

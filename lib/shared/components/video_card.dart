@@ -25,43 +25,50 @@ class VideoCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _Thumbnail(url: video.thumbnailUrl),
-            Padding(
-              padding: const EdgeInsets.all(ViikshanaSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    video.title,
-                    style: theme.textTheme.titleSmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: ViikshanaSpacing.xs),
-                  Row(
-                    children: [
-                      if (video.channelName != null)
-                        Expanded(
-                          child: Text(
-                            video.channelName!,
-                            style: theme.textTheme.bodySmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      if (video.viewCount > 0) ...[
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(ViikshanaSpacing.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      video.title,
+                      style: theme.textTheme.titleSmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: ViikshanaSpacing.xs),
+                    Row(
+                      children: [
                         if (video.channelName != null)
-                          Text(
-                            ' • ',
-                            style: theme.textTheme.bodySmall,
+                          Expanded(
+                            child: Text(
+                              video.channelName!,
+                              style: theme.textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        Text(
-                          _formatViews(video.viewCount),
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        if (video.viewCount > 0) ...[
+                          if (video.channelName != null)
+                            Text(
+                              ' • ',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          Flexible(
+                            child: Text(
+                              _formatViews(video.viewCount),
+                              style: theme.textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

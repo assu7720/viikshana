@@ -368,7 +368,7 @@ void main() {
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.text('Home'), findsAtLeastNWidgets(1));
       expect(
-        find.byType(GridView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
+        find.byType(ListView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
         isTrue,
       );
     });
@@ -438,7 +438,7 @@ void main() {
       expect(find.byType(MobileShell), findsOneWidget);
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(
-        find.byType(GridView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
+        find.byType(ListView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
         isTrue,
       );
       expect(find.text('Home'), findsAtLeastNWidgets(1));
@@ -455,7 +455,7 @@ void main() {
       expect(find.byType(MobileShell), findsOneWidget);
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(
-        find.byType(GridView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
+        find.byType(ListView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
         isTrue,
       );
       expect(find.text('Home'), findsAtLeastNWidgets(1));
@@ -472,7 +472,7 @@ void main() {
       expect(find.byType(MobileShell), findsOneWidget);
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(
-        find.byType(GridView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
+        find.byType(ListView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
         isTrue,
       );
       expect(find.text('Home'), findsAtLeastNWidgets(1));
@@ -489,7 +489,7 @@ void main() {
       expect(find.byType(MobileShell), findsOneWidget);
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(
-        find.byType(GridView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
+        find.byType(ListView).evaluate().isNotEmpty || find.text('No videos yet').evaluate().isNotEmpty,
         isTrue,
       );
       expect(find.text('Home'), findsAtLeastNWidgets(1));
