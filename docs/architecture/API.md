@@ -5,6 +5,16 @@ The provided OpenAPI spec is the single source of truth.
 
 ---
 
+## Media (thumbnails & video files)
+
+Thumbnails and video assets (HLS, MP4) are served from:
+
+**`https://videoprocess.viikshana.com`**
+
+The API may return full URLs (e.g. `https://videoprocess.viikshana.com/processed/{id}/thumbnail.jpg`) or relative paths; the client resolves relative paths using this base.
+
+---
+
 ## 1. VIDEO FEEDS
 
 ### Home Feed

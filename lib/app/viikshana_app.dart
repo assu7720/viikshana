@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
-import '../navigation/app_router.dart'; // Fix import paths
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/misc.dart' show Override;
+import 'package:viikshana/navigation/app_router.dart';
+import 'package:viikshana/shared/theme/viikshana_theme.dart';
 
 class ViikshanaApp extends StatelessWidget {
-  const ViikshanaApp({super.key});
+  const ViikshanaApp({super.key, this.overrides});
+
+  /// Provider overrides (e.g. for tests). Pass to [ProviderScope].
+  final List<Override>? overrides;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Viikshana',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(useMaterial3: true), // Correct Material3 theme
-      home: const AppRouter(), // Restore platform routing
+    return ProviderScope(
+      overrides: overrides ?? [],
+      child: MaterialApp(
+        title: 'Viikshana',
+        debugShowCheckedModeBanner: false,
+        theme: ViikshanaTheme.dark(),
+        darkTheme: ViikshanaTheme.dark(),
+        themeMode: ThemeMode.dark,
+        home: const AppRouter(),
+      ),
     );
   }
 }

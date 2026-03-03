@@ -2,6 +2,18 @@
 
 This file defines the build milestones and the gating protocol between Agent 1 (Developer) and Agent 2 (Reviewer).
 
+## Status (done / next)
+
+| Milestone | Status |
+|-----------|--------|
+| M1 — Theme + Design Tokens | **DONE** |
+| M2 — Mobile/Tablet Navigation Shell | **DONE** |
+| M3 — Android TV Navigation Shell | **DONE** |
+| M4 — API Client + Models | **DONE** |
+| M5 — Home Screen (Anonymous) | **DONE** |
+| M6 — Video Player Core | Next |
+| M7–M11 | Pending |
+
 ## Gating Protocol (MANDATORY)
 
 After each milestone, Agent 1 MUST:
@@ -35,6 +47,7 @@ Including:
 ## Milestones (LOCKED ORDER)
 
 ### M1 — Theme + Design Tokens
+**Status: DONE**
 Deliverables:
 - Dark theme + orange accent aligned to viikshana.com
 - Typography scale, spacing tokens, reusable components base
@@ -44,6 +57,7 @@ Acceptance:
 - flutter analyze/test green
 
 ### M2 — Mobile/Tablet Navigation Shell
+**Status: DONE**
 Deliverables:
 - Bottom nav (5 tabs): Home, Clips, Upload, Search, Account
 - Each tab keeps its own navigation stack
@@ -54,6 +68,7 @@ Acceptance:
 - flutter analyze/test green
 
 ### M3 — Android TV Navigation Shell
+**Status: DONE**
 Deliverables:
 - Left sidebar menu per requirements
 - D-pad focus navigation + visible focus highlight
@@ -63,6 +78,7 @@ Acceptance:
 - flutter analyze/test green
 
 ### M4 — API Client + Models (Home + Video)
+**Status: DONE**
 Deliverables:
 - HTTP client + base URL config
 - Models for /videos/home and /videos/{id}
@@ -72,6 +88,7 @@ Acceptance:
 - flutter analyze/test green
 
 ### M5 — Home Screen (Anonymous)
+**Status: DONE**
 Deliverables:
 - Responsive grid (phone/tablet)
 - Infinite scroll using /videos/home

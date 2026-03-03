@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../tokens/viikshana_colors.dart'; // Fix import paths
-import '../../tokens/viikshana_spacing.dart'; // Fix import paths
+import 'package:viikshana/shared/tokens/viikshana_colors.dart';
+import 'package:viikshana/shared/tokens/viikshana_typography.dart';
 
 class ViikshanaTheme {
   static ThemeData light() {
@@ -23,11 +23,18 @@ class ViikshanaTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: ViikshanaColors.brandOrange,
         brightness: Brightness.dark,
+        surface: ViikshanaColors.surfaceDark,
       ),
       scaffoldBackgroundColor: ViikshanaColors.backgroundDark,
       appBarTheme: AppBarTheme(
         backgroundColor: ViikshanaColors.surfaceDark,
+        foregroundColor: ViikshanaColors.onSurfaceDark,
       ),
+      iconTheme: IconThemeData(
+        color: ViikshanaColors.onSurfaceDark,
+        size: 24,
+      ),
+      textTheme: ViikshanaTypography.darkTextTheme(),
     );
   }
 }
