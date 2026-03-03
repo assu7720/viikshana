@@ -1,12 +1,14 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart' show StateController;
 import 'package:video_player/video_player.dart';
 import 'package:viikshana/core/providers/player_providers.dart';
 import 'package:viikshana/core/providers/video_detail_provider.dart';
+import 'package:viikshana/core/watch_history/watch_history_repository.dart';
 import 'package:viikshana/data/models/video_detail.dart';
 
-/// Sample HLS URL for acceptance when API does not return one.
+/// Sample HLS URL used only by mock API (ApiConfig.isMock) for tests.
 const String sampleHlsUrl =
     'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 
@@ -23,14 +25,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _fullScreenListenerAttached = false;
+  StateController<bool>? _fullScreenNotifier;
+  WatchHistoryRepository? _watchHistoryRepo;
 
   @override
   void dispose() {
-    _savePosition();
     _chewieController?.removeListener(_onChewieUpdate);
-    _chewieController?.dispose();
-    _videoController?.dispose();
-    ref.read(fullScreenPlayerProvider.notifier).state = false;
+    _fullScreenNotifier?.state = false;
     super.dispose();
   }
 
@@ -38,24 +39,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final chewie = _chewieController;
     if (chewie == null) return;
     final isFullScreen = chewie.isFullScreen;
-    ref.read(fullScreenPlayerProvider.notifier).state = isFullScreen;
-  }
-
-  void _savePosition() {
-    final c = _videoController;
-    if (c == null || !c.value.isInitialized) return;
-    final repo = ref.read(watchHistoryRepositoryProvider);
-    final videoId = widget.videoId;
-    c.position.then((pos) {
-      final sec = pos?.inSeconds ?? 0;
-      if (sec > 0) {
-        repo.setPosition(videoId, sec);
-      }
-    });
+    _fullScreenNotifier?.state = isFullScreen;
   }
 
   @override
   Widget build(BuildContext context) {
+    _fullScreenNotifier ??= ref.read(fullScreenPlayerProvider.notifier);
+    _watchHistoryRepo ??= ref.read(watchHistoryRepositoryProvider);
     final detailAsync = ref.watch(videoDetailProvider(widget.videoId));
 
     return Scaffold(
@@ -93,7 +83,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   Widget _buildPlayer(VideoDetail detail) {
-    final hlsUrl = detail.hlsUrl ?? sampleHlsUrl;
+    final hlsUrl = detail.hlsUrl?.trim() ?? '';
     if (hlsUrl.isEmpty) {
       return Center(
         child: Text(
@@ -108,6 +98,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       videoId: widget.videoId,
       hlsUrl: hlsUrl,
       startAt: startAt,
+      onSavePosition: (positionSeconds) {
+        _watchHistoryRepo?.setPosition(widget.videoId, positionSeconds);
+      },
       onControllersReady: (video, chewie) {
         if (!_fullScreenListenerAttached && chewie != null) {
           _fullScreenListenerAttached = true;
@@ -121,7 +114,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   Duration _getStartPosition() {
-    final repo = ref.read(watchHistoryRepositoryProvider);
+    final WatchHistoryRepository repo = _watchHistoryRepo ?? ref.read(watchHistoryRepositoryProvider);
     final seconds = repo.getPosition(widget.videoId);
     return Duration(seconds: seconds);
   }
@@ -132,12 +125,14 @@ class _VideoPlayerContent extends StatefulWidget {
     required this.videoId,
     required this.hlsUrl,
     required this.startAt,
+    required this.onSavePosition,
     required this.onControllersReady,
   });
 
   final String videoId;
   final String hlsUrl;
   final Duration startAt;
+  final void Function(int positionSeconds) onSavePosition;
   final void Function(
     VideoPlayerController video,
     ChewieController? chewie,
@@ -195,6 +190,10 @@ class _VideoPlayerContentState extends State<_VideoPlayerContent> {
 
   @override
   void dispose() {
+    _videoController?.position.then((pos) {
+      final sec = pos?.inSeconds ?? 0;
+      if (sec > 0) widget.onSavePosition(sec);
+    });
     _chewieController?.dispose();
     _videoController?.dispose();
     super.dispose();

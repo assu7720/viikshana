@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:viikshana/core/api/api_config.dart';
 import 'package:viikshana/data/models/channel_metadata.dart';
 import 'package:viikshana/data/models/video_item.dart';
 
@@ -32,19 +34,76 @@ class VideoDetail {
   final int commentCount;
   final ChannelMetadata? channel;
 
+  /// Tries common API keys for HLS playlist URL; supports nested playback/streams.
+  static String? _parseHlsUrl(Map<String, dynamic> json) {
+    const keys = [
+      'hlsUrl', 'hls_url', 'playlistUrl', 'playlist_url',
+      'streamUrl', 'stream_url', 'playbackUrl', 'playback_url',
+      'videoUrl', 'video_url', 'source', 'url',
+      'hlsPath', 'hls_path', 'playlistPath', 'processedPath',
+    ];
+    for (final k in keys) {
+      final v = json[k];
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+    }
+    final playback = json['playback'];
+    if (playback is Map<String, dynamic>) {
+      for (final k in keys) {
+        final v = playback[k];
+        if (v is String && v.trim().isNotEmpty) return v.trim();
+      }
+    }
+    final streams = json['streams'];
+    if (streams is List && streams.isNotEmpty) {
+      final first = streams.first;
+      if (first is Map<String, dynamic>) {
+        final u = first['url'] ?? first['src'];
+        if (u is String && u.trim().isNotEmpty) return u.trim();
+      }
+    }
+    if (kDebugMode) {
+      debugPrint('[VideoDetail] No HLS URL found. Top-level keys: ${json.keys.join(', ')}');
+    }
+    return null;
+  }
+
+  static int _parseDurationSeconds(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is String) {
+      final d = double.tryParse(v);
+      if (d != null) return d.toInt();
+      final i = int.tryParse(v);
+      if (i != null) return i;
+    }
+    return 0;
+  }
+
+  /// Coerce dynamic to String? (handles int, double, String from API).
+  static String? _stringValue(dynamic v) {
+    if (v == null) return null;
+    if (v is String) return v.isEmpty ? null : v;
+    if (v is int || v is double) return v.toString();
+    return null;
+  }
+
   factory VideoDetail.fromJson(Map<String, dynamic> json) {
     return VideoDetail(
-      id: json['id'] as String? ?? '',
-      title: json['title'] as String? ?? '',
-      thumbnailUrl: json['thumbnailUrl'] as String?,
-      channelId: json['channelId'] as String?,
-      channelName: json['channelName'] as String?,
-      viewCount: VideoItem.parseInt(json['viewCount'], 0),
-      durationSeconds: VideoItem.parseInt(json['durationSeconds'], 0),
+      id: _stringValue(json['id']) ?? '',
+      title: _stringValue(json['title']) ?? '',
+      thumbnailUrl: _stringValue(json['thumbnailUrl'] ?? json['thumbnail'] ?? json['thumbnailHome']),
+      channelId: _stringValue(json['channelId']),
+      channelName: _stringValue(json['channelName']),
+      viewCount: VideoItem.parseInt(json['viewCount'] ?? json['views'], 0),
+      durationSeconds: _parseDurationSeconds(json['durationSeconds'] ?? json['duration']),
       publishedAt: json['publishedAt'] != null
-          ? DateTime.tryParse(json['publishedAt'] as String)
+          ? DateTime.tryParse(_stringValue(json['publishedAt']) ?? '')
           : null,
-      hlsUrl: json['hlsUrl'] as String?,
+      hlsUrl: () {
+        final raw = _parseHlsUrl(json);
+        if (raw == null || raw.isEmpty) return null;
+        return ApiConfig.resolveMediaUrl(raw);
+      }(),
       likeCount: VideoItem.parseInt(json['likeCount'], 0),
       commentCount: VideoItem.parseInt(json['commentCount'], 0),
       channel: json['channel'] != null

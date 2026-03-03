@@ -12,10 +12,17 @@ class ChannelMetadata {
 
   factory ChannelMetadata.fromJson(Map<String, dynamic> json) {
     return ChannelMetadata(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
+      id: _stringFromJson(json['id']) ?? '',
+      name: _stringFromJson(json['name']),
+      avatarUrl: _stringFromJson(json['avatarUrl'] ?? json['logo']),
     );
+  }
+
+  static String? _stringFromJson(dynamic v) {
+    if (v == null) return null;
+    if (v is String) return v.isEmpty ? null : v;
+    if (v is int || v is double) return v.toString();
+    return null;
   }
 
   Map<String, dynamic> toJson() {

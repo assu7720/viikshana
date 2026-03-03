@@ -137,6 +137,18 @@ void main() {
       expect(item.channelName, 'CN');
       expect(item.viewCount, 10);
     });
+
+    test('resolves relative hlsUrl with media base URL', () {
+      final d = VideoDetail.fromJson({
+        'id': 'v1',
+        'title': 'T',
+        'hlsUrl': '/processed/fr1zWx/360p/playlist.m3u8',
+      });
+      expect(
+        d.hlsUrl,
+        'https://videoprocess.viikshana.com/processed/fr1zWx/360p/playlist.m3u8',
+      );
+    });
   });
 
   group('HomeFeedResponse.fromJson', () {

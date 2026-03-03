@@ -98,6 +98,40 @@ void main() {
       expect(detail.hlsUrl, 'https://hls.example.com/master.m3u8');
     });
 
+    test('getVideo in mock mode returns stub with sample HLS URL', () async {
+      final client = ApiClient(config: ApiConfig(baseUrl: ''));
+      final detail = await client.getVideo('any-id');
+      expect(detail.id, 'any-id');
+      expect(detail.title, 'Sample (mock)');
+      expect(detail.hlsUrl, isNotNull);
+      expect(detail.hlsUrl, contains('m3u8'));
+    });
+
+    test('getVideo unwraps success/data wrapper and uses hlsPath', () async {
+      final mockClient = _MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'id': 'ZqY5Tz',
+              'title': 'Bhojpuri Song',
+              'hlsPath': 'https://videoprocess.viikshana.com/processed/ZqY5Tz/master.m3u8',
+              'views': 1,
+              'duration': '213.000',
+            },
+          }),
+          200,
+        );
+      });
+      final client = ApiClient(client: mockClient);
+      final detail = await client.getVideo('ZqY5Tz');
+      expect(detail.id, 'ZqY5Tz');
+      expect(detail.title, 'Bhojpuri Song');
+      expect(detail.hlsUrl, 'https://videoprocess.viikshana.com/processed/ZqY5Tz/master.m3u8');
+      expect(detail.viewCount, 1);
+      expect(detail.durationSeconds, 213);
+    });
+
     test('non-2xx throws ApiException with requiresLogin when present', () async {
       final mockClient = _MockClient((request) async {
         return http.Response(

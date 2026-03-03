@@ -59,7 +59,10 @@ class ApiClient {
     if (kDebugMode) debugPrint('[API] OUTGOING: GET $uri');
     final response = await _request(() => _client.get(uri));
     if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
-    return _parseJson(response, VideoDetail.fromJson);
+    final map = _parseJson(response, (m) => m);
+    final data = map['data'];
+    final videoMap = data is Map<String, dynamic> ? data : map;
+    return VideoDetail.fromJson(videoMap);
   }
 
   Future<http.Response> _request(Future<http.Response> Function() call) async {

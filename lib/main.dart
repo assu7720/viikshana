@@ -6,15 +6,15 @@ import 'package:viikshana/app/viikshana_app.dart';
 import 'package:viikshana/core/watch_history/watch_history_repository.dart';
 import 'package:viikshana/data/hive/watch_history_adapter.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await Hive.initFlutter();
-  Hive.registerAdapter(WatchHistoryEntryAdapter());
-  await initWatchHistoryBox();
-
+void main() {
   runZonedGuarded<void>(
-    () {
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      await Hive.initFlutter();
+      Hive.registerAdapter(WatchHistoryEntryAdapter());
+      await initWatchHistoryBox();
+
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
         if (kDebugMode) {
