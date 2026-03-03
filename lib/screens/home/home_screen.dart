@@ -51,7 +51,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     const titleHeight = 34.0; // ~2 lines titleSmall
     const metaHeight = 14.0; // 1 line bodySmall
     const gap = 4.0; // xs
-    const bottomBuffer = 14.0; // avoid text overflow on some titles
+    const bottomBuffer = 20.0; // avoid text overflow (tablet narrow cards)
     return cardWidth * (9 / 16) + paddingVertical + titleHeight + gap + metaHeight + bottomBuffer;
   }
 

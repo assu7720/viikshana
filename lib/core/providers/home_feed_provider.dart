@@ -66,7 +66,9 @@ class HomeFeedNotifier extends Notifier<HomeFeedState> {
 
   Future<void> loadMore() async {
     if (state.isLoading || !state.hasMore) return;
-    await _loadPage(state.nextPage);
+    final page = state.nextPage;
+    state = state.copyWith(isLoading: true);
+    await _loadPage(page);
   }
 
   Future<void> _loadPage(int page) async {

@@ -26,12 +26,13 @@ class VideoCard extends StatelessWidget {
           children: [
             _Thumbnail(url: video.thumbnailUrl),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(ViikshanaSpacing.sm),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              child: ClipRect(
+                child: Padding(
+                  padding: const EdgeInsets.all(ViikshanaSpacing.sm),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     Text(
                       video.title,
                       style: theme.textTheme.titleSmall,
@@ -71,6 +72,7 @@ class VideoCard extends StatelessWidget {
                 ),
               ),
             ),
+          ),
           ],
         ),
       ),
