@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 
 import 'package:viikshana/core/api/api_config.dart';
 import 'package:viikshana/core/api/api_exception.dart';
+import 'package:viikshana/data/models/api_user_profile.dart';
+import 'package:viikshana/data/models/login_response.dart';
 import 'package:viikshana/data/models/home_feed_response.dart';
 import 'package:viikshana/data/models/video_detail.dart';
 import 'package:viikshana/data/models/comment.dart';
@@ -14,11 +16,15 @@ class ApiClient {
   ApiClient({
     ApiConfig? config,
     http.Client? client,
+    this.getAccessToken,
   })  : _config = config ?? ApiConfig(),
         _client = client ?? http.Client();
 
   final ApiConfig _config;
   final http.Client _client;
+
+  /// When set, used for `Authorization: Bearer <token>` on GET /auth/api/me and other authenticated calls.
+  final String? Function()? getAccessToken;
 
   static const int _maxRetries = 2;
   static const Duration _retryDelay = Duration(milliseconds: 500);
@@ -160,6 +166,77 @@ class ApiClient {
     final result = _parseJson(response, HomeFeedResponse.fromJson);
     if (kDebugMode) debugPrint('[API] getRelatedVideos returned: ${result.videos.length}');
     return result;
+  }
+
+  /// POST /auth/api/login. Sends { email, password }.
+  /// On 200: returns [LoginResponse] with user and tokens. On 400/401/4xx: throws [ApiException].
+  /// When [ApiConfig.isMock] is true, skips network and returns a stub.
+  Future<LoginResponse> login(String email, String password) async {
+    if (_config.isMock) {
+      if (kDebugMode) debugPrint('[API] login (mock): no network call');
+      return const LoginResponse(success: true);
+    }
+    final uri = _config.authLoginUrl;
+    if (kDebugMode) debugPrint('[API] OUTGOING: POST $uri');
+    final body = jsonEncode({'email': email, 'password': password});
+    final response = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+    if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final map = jsonDecode(response.body) as Map<String, dynamic>?;
+      if (map != null) {
+        if (kDebugMode) {
+          final topKeys = map.keys.toList().join(', ');
+          final data = map['data'];
+          final dataKeys = data is Map ? data.keys.toList().join(', ') : null;
+          debugPrint('[API] login response keys: {$topKeys}${dataKeys != null ? ' data: {$dataKeys}' : ''}');
+        }
+        final loginResponse = LoginResponse.fromJson(map);
+        if (kDebugMode) {
+          debugPrint('[API] login: ${loginResponse.accessToken != null ? "tokens parsed" : "no tokens in response"}');
+        }
+        return loginResponse;
+      }
+      return const LoginResponse(success: true);
+    }
+    final requiresLogin = _parseRequiresLogin(response.body);
+    throw ApiException(
+      'Login failed: ${response.statusCode}',
+      statusCode: response.statusCode,
+      requiresLogin: requiresLogin,
+    );
+  }
+
+  /// Clears stored session (call on sign-out). No-op for token-based auth; tokens are cleared via [SessionRepository].
+  void clearSession() {}
+
+  /// GET /auth/api/me. Returns current user profile when session is valid.
+  /// Uses `Authorization: Bearer <token>` when [getAccessToken] is set. Returns null on 401 or when mock.
+  Future<ApiUserProfile?> getMe() async {
+    if (_config.isMock) {
+      if (kDebugMode) debugPrint('[API] getMe (mock): no network call');
+      return null;
+    }
+    final uri = _config.authMeUrl;
+    if (kDebugMode) debugPrint('[API] OUTGOING: GET $uri');
+    final headers = <String, String>{};
+    final token = getAccessToken?.call();
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    final response = await _client.get(uri, headers: headers.isEmpty ? null : headers);
+    if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
+    if (response.statusCode == 401) return null;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException('Profile request failed: ${response.statusCode}', statusCode: response.statusCode);
+    }
+    final map = _parseJson(response, (m) => m);
+    final data = map['data'];
+    final profileMap = data is Map<String, dynamic> ? data : map;
+    return ApiUserProfile.fromJson(profileMap);
   }
 
   Future<http.Response> _request(Future<http.Response> Function() call) async {

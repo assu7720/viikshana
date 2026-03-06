@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:viikshana/app/viikshana_app.dart';
 import 'package:viikshana/core/api/api_client.dart';
 import 'package:viikshana/core/api/api_config.dart';
+import 'package:viikshana/core/auth/auth_provider.dart';
 import 'package:viikshana/core/platform/platform_info.dart';
 import 'package:viikshana/core/providers/home_feed_provider.dart';
 import 'package:viikshana/navigation/app_router.dart';
@@ -32,6 +34,11 @@ List<Override> get kMockApiOverrides => [
           client: _mockHttpClient(),
         ),
       ),
+    ];
+
+/// Auth overrides so screens that need auth get null user (no Firebase in tests).
+List<Override> get kMockAuthOverrides => [
+      authStateProvider.overrideWith((ref) => Stream<User?>.value(null)),
     ];
 
 http.Client _mockHttpClient() {
@@ -906,9 +913,12 @@ void main() {
 
     testWidgets('UploadScreen has AppBar title Upload', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ViikshanaTheme.dark(),
-          home: const UploadScreen(),
+        ProviderScope(
+          overrides: kMockAuthOverrides,
+          child: MaterialApp(
+            theme: ViikshanaTheme.dark(),
+            home: const UploadScreen(),
+          ),
         ),
       );
 
@@ -931,9 +941,12 @@ void main() {
 
     testWidgets('AccountScreen has AppBar title Account', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ViikshanaTheme.dark(),
-          home: const AccountScreen(),
+        ProviderScope(
+          overrides: kMockAuthOverrides,
+          child: MaterialApp(
+            theme: ViikshanaTheme.dark(),
+            home: const AccountScreen(),
+          ),
         ),
       );
 
@@ -951,7 +964,7 @@ void main() {
       for (final screen in screens) {
         await tester.pumpWidget(
           ProviderScope(
-            overrides: kMockApiOverrides,
+            overrides: [...kMockApiOverrides, ...kMockAuthOverrides],
             child: MaterialApp(
               theme: ViikshanaTheme.dark(),
               home: screen,

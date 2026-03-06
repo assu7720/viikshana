@@ -14,7 +14,8 @@ This file defines the build milestones and the gating protocol between Agent 1 (
 | M6 — Video Player Core | **DONE** |
 | M7 — Search + History | **DONE** |
 | M8 — Video Play Screen (Full Layout) | **Partial** |
-| M9–M12 | Pending |
+| M9 — Auth (Firebase) + Gating | **DONE** |
+| M10–M12 | Pending |
 
 ## Gating Protocol (MANDATORY)
 
@@ -151,12 +152,18 @@ Acceptance:
 - **Proceeding:** M8 marked **Partial**; above items can be addressed in a follow-up or during M9 integration.
 
 ### M9 — Auth (Firebase) + Gating
+**Status: DONE**
 Deliverables:
 - Email/password login
 - Anonymous restrictions enforced (like/comment/subscribe/upload)
 Acceptance:
 - Restricted actions prompt login
 - flutter analyze/test green
+
+**M9 summary (gating):**
+- **What changed:** API login (POST /auth/api/login) with session tokens stored in Hive. LoginResponse/LoginResponseUser models; ApiClient.login/getMe with Bearer token; SessionRepository + sessionVersionProvider for reactive signed-in state. Account screen shows signed-in profile (GET /auth/api/me) and Sign out when token present; after login, version bump so UI updates. Login screen: email/password, setTokens + sessionVersion bump + pop. Auth gating: isSignedInProvider (session token OR Firebase user); Account/Upload/Player gate on auth. Full test coverage: LoginResponse, ApiClient login/getMe, SessionRepository, session/auth providers, currentUserProfileProvider.
+- **How to test:** Run with API base URL set → Account → Sign in → enter credentials → after success, Account shows profile and Sign out. Sign out clears session. Run `flutter analyze` and `flutter test` (all tests pass).
+- **Known limitations:** Firebase sign-in optional (fallback when API returns no tokens). Refresh token not yet used for token refresh flow.
 
 ### M10 — Engagement (Like/Comment/Subscribe)
 Deliverables:

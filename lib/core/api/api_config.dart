@@ -86,6 +86,16 @@ class ApiConfig {
     return Uri.parse(baseUrl).replace(path: relatedVideosPath(videoId));
   }
 
+  /// POST /auth/api/login (session + cookies). Body: { email, password }.
+  String get authLoginPath => '/auth/api/login';
+
+  Uri get authLoginUrl => Uri.parse(baseUrl).replace(path: authLoginPath);
+
+  /// GET /auth/api/me (current user profile; session required).
+  String get authMePath => '/auth/api/me';
+
+  Uri get authMeUrl => Uri.parse(baseUrl).replace(path: authMePath);
+
   /// Resolves a thumbnail or video URL. If [urlOrPath] is relative (starts with /), prepends [mediaBaseUrl].
   static String resolveMediaUrl(String? urlOrPath) {
     if (urlOrPath == null || urlOrPath.isEmpty) return urlOrPath ?? '';

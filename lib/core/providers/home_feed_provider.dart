@@ -3,13 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:viikshana/core/api/api_client.dart';
 import 'package:viikshana/core/api/api_config.dart';
 import 'package:viikshana/core/api/dev_http_client.dart';
+import 'package:viikshana/core/session/session_provider.dart';
 import 'package:viikshana/data/models/video_item.dart';
+
+String? _getAccessToken(Ref ref) => ref.read(sessionRepositoryProvider).accessToken;
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final config = ApiConfig();
-  // In debug, use a client that allows bad SSL certs (e.g. emulator CERTIFICATE_VERIFY_FAILED).
   final client = kDebugMode && !config.isMock ? createDevHttpClient() : null;
-  return ApiClient(config: config, client: client);
+  return ApiClient(config: config, client: client, getAccessToken: () => _getAccessToken(ref));
 });
 
 /// State for the home feed (infinite list).

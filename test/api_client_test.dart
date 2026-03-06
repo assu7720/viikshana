@@ -313,6 +313,178 @@ void main() {
       expect(result.videos[1].id, 'v2');
       expect(result.hasMore, false);
     });
+
+    test('login parses success response with data.tokens', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/auth/api/login');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'user': {'id': 1, 'email': 'u@test.com', 'username': 'u1'},
+              'tokens': {
+                'accessToken': 'access-123',
+                'refreshToken': 'refresh-456',
+              },
+            },
+          }),
+          200,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+      );
+      final res = await client.login('u@test.com', 'pass');
+      expect(res.success, true);
+      expect(res.accessToken, 'access-123');
+      expect(res.refreshToken, 'refresh-456');
+      expect(res.user?.email, 'u@test.com');
+      expect(res.user?.username, 'u1');
+    });
+
+    test('login throws ApiException on 401', () async {
+      final mockClient = _MockClient((_) async {
+        return http.Response(
+          jsonEncode({'message': 'Invalid credentials', 'requiresLogin': true}),
+          401,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+      );
+      expect(
+        () => client.login('a@b.com', 'wrong'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)
+              .having((e) => e.requiresLogin, 'requiresLogin', true),
+        ),
+      );
+    });
+
+    test('login throws ApiException on 400', () async {
+      final mockClient = _MockClient((_) async {
+        return http.Response(
+          jsonEncode({'message': 'Bad request'}),
+          400,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+      );
+      expect(
+        () => client.login('a@b.com', 'p'),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 400)),
+      );
+    });
+
+    test('login 200 with null body returns stub success', () async {
+      final mockClient = _MockClient((_) async => http.Response('null', 200));
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+      );
+      final res = await client.login('a@b.com', 'p');
+      expect(res.success, true);
+      expect(res.accessToken, isNull);
+      expect(res.refreshToken, isNull);
+    });
+
+    test('login in mock mode returns stub without tokens', () async {
+      final client = ApiClient(config: ApiConfig(baseUrl: ''));
+      final res = await client.login('any@x.com', 'any');
+      expect(res.success, true);
+      expect(res.accessToken, isNull);
+      expect(res.refreshToken, isNull);
+    });
+
+    test('getMe returns profile when 200 with Bearer token', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/auth/api/me');
+        expect(request.headers['Authorization'], 'Bearer token-xyz');
+        return http.Response(
+          jsonEncode({
+            'data': {
+              'id': 10,
+              'email': 'me@test.com',
+              'username': 'me',
+              'name': 'Me User',
+            },
+          }),
+          200,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 'token-xyz',
+      );
+      final profile = await client.getMe();
+      expect(profile, isNotNull);
+      expect(profile!.id, 10);
+      expect(profile.email, 'me@test.com');
+      expect(profile.username, 'me');
+      expect(profile.name, 'Me User');
+    });
+
+    test('getMe returns null on 401', () async {
+      final mockClient = _MockClient((_) async => http.Response('', 401));
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 'token',
+      );
+      final profile = await client.getMe();
+      expect(profile, isNull);
+    });
+
+    test('getMe parses profile at top level when no data wrapper', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.headers['Authorization'], 'Bearer t');
+        return http.Response(
+          jsonEncode({'id': 7, 'email': 'top@test.com', 'username': 'top'}),
+          200,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final profile = await client.getMe();
+      expect(profile, isNotNull);
+      expect(profile!.id, 7);
+      expect(profile.email, 'top@test.com');
+      expect(profile.username, 'top');
+    });
+
+    test('getMe sends no Authorization header when getAccessToken is null', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.headers.containsKey('Authorization'), false);
+        return http.Response(
+          jsonEncode({'data': {'id': 1, 'email': 'n@x.com'}}),
+          200,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+      );
+      final profile = await client.getMe();
+      expect(profile, isNotNull);
+      expect(profile!.id, 1);
+    });
+
+    test('getMe in mock mode returns null', () async {
+      final client = ApiClient(config: ApiConfig(baseUrl: ''));
+      final profile = await client.getMe();
+      expect(profile, isNull);
+    });
   });
 }
 

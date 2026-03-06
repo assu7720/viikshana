@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateController;
 import 'package:video_player/video_player.dart';
+import 'package:viikshana/core/auth/auth_provider.dart';
 import 'package:viikshana/core/providers/player_providers.dart';
 import 'package:viikshana/core/providers/video_detail_provider.dart';
 import 'package:viikshana/core/api/api_config.dart';
@@ -10,6 +11,7 @@ import 'package:viikshana/core/watch_history/watch_history_repository.dart';
 import 'package:viikshana/data/models/comment.dart';
 import 'package:viikshana/data/models/video_detail.dart';
 import 'package:viikshana/data/models/video_item.dart';
+import 'package:viikshana/screens/auth/login_screen.dart';
 import 'package:viikshana/shared/components/video_card.dart';
 import 'package:viikshana/shared/tokens/viikshana_spacing.dart';
 
@@ -168,6 +170,16 @@ class _PlayerBodyContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final user = ref.watch(currentUserProvider);
+    final isSignedIn = user != null;
+    void onRequireLogin() {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to comment, like, subscribe, and more')),
+      );
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      );
+    }
     final commentsAsync = ref.watch(videoCommentsProvider(videoId));
     final relatedAsync = ref.watch(relatedVideosProvider(videoId));
 
@@ -198,9 +210,9 @@ class _PlayerBodyContent extends ConsumerWidget {
             _ExpandableDescription(text: detail.description!),
           ],
           const SizedBox(height: ViikshanaSpacing.md),
-          _ChannelRow(detail: detail),
+          _ChannelRow(detail: detail, isSignedIn: isSignedIn, onRequireLogin: onRequireLogin),
           const SizedBox(height: ViikshanaSpacing.md),
-          _EngagementRow(detail: detail),
+          _EngagementRow(detail: detail, isSignedIn: isSignedIn, onRequireLogin: onRequireLogin),
           const SizedBox(height: ViikshanaSpacing.md),
           SectionHeader(title: 'Comments ${detail.commentCount}'),
           const SizedBox(height: ViikshanaSpacing.sm),
@@ -216,7 +228,15 @@ class _PlayerBodyContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: ViikshanaSpacing.sm),
-          _CommentInputStub(onTap: () => _showLoginStub(context)),
+          _CommentInputStub(
+            onTap: () {
+              if (isSignedIn) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment posting coming in M10')));
+              } else {
+                onRequireLogin();
+              }
+            },
+          ),
           const SizedBox(height: ViikshanaSpacing.lg),
           SectionHeader(title: 'Related'),
           const SizedBox(height: ViikshanaSpacing.sm),
@@ -241,12 +261,6 @@ class _PlayerBodyContent extends ConsumerWidget {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M views';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K views';
     return '$n views';
-  }
-
-  static void _showLoginStub(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sign in to comment, like, or subscribe (coming in M9)')),
-    );
   }
 }
 
@@ -275,8 +289,10 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
 }
 
 class _ChannelRow extends StatelessWidget {
-  const _ChannelRow({required this.detail});
+  const _ChannelRow({required this.detail, required this.isSignedIn, required this.onRequireLogin});
   final VideoDetail detail;
+  final bool isSignedIn;
+  final VoidCallback onRequireLogin;
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +323,9 @@ class _ChannelRow extends StatelessWidget {
           ),
         ),
         FilledButton.tonal(
-          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign in to subscribe (coming in M9)'))),
+          onPressed: () => isSignedIn
+              ? ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subscribe coming in M10')))
+              : onRequireLogin(),
           child: const Text('Subscribe'),
         ),
       ],
@@ -316,23 +334,28 @@ class _ChannelRow extends StatelessWidget {
 }
 
 class _EngagementRow extends StatelessWidget {
-  const _EngagementRow({required this.detail});
+  const _EngagementRow({required this.detail, required this.isSignedIn, required this.onRequireLogin});
   final VideoDetail detail;
+  final bool isSignedIn;
+  final VoidCallback onRequireLogin;
 
   @override
   Widget build(BuildContext context) {
+    void onTap() => isSignedIn
+        ? ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming in M10')))
+        : onRequireLogin();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ActionChip(icon: Icons.thumb_up_outlined, label: _formatCount(detail.likeCount), onTap: () => _stub(context)),
-          _ActionChip(icon: Icons.thumb_down_outlined, label: 'Dislike', onTap: () => _stub(context)),
-          _ActionChip(icon: Icons.share_outlined, label: 'Share', onTap: () => _stub(context)),
-          _ActionChip(icon: Icons.download_outlined, label: 'Download', onTap: () => _stub(context)),
-          _ActionChip(icon: Icons.playlist_add_outlined, label: 'Save', onTap: () => _stub(context)),
-          _ActionChip(icon: Icons.volunteer_activism_outlined, label: 'Thanks', onTap: () => _stub(context)),
-          _ActionChip(icon: Icons.flag_outlined, label: 'Report', onTap: () => _stub(context)),
+          _ActionChip(icon: Icons.thumb_up_outlined, label: _formatCount(detail.likeCount), onTap: onTap),
+          _ActionChip(icon: Icons.thumb_down_outlined, label: 'Dislike', onTap: onTap),
+          _ActionChip(icon: Icons.share_outlined, label: 'Share', onTap: onTap),
+          _ActionChip(icon: Icons.download_outlined, label: 'Download', onTap: onTap),
+          _ActionChip(icon: Icons.playlist_add_outlined, label: 'Save', onTap: onTap),
+          _ActionChip(icon: Icons.volunteer_activism_outlined, label: 'Thanks', onTap: onTap),
+          _ActionChip(icon: Icons.flag_outlined, label: 'Report', onTap: onTap),
         ],
       ),
     );
@@ -342,10 +365,6 @@ class _EngagementRow extends StatelessWidget {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n.toString();
-  }
-
-  static void _stub(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign in required (coming in M9)')));
   }
 }
 
