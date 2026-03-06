@@ -13,7 +13,7 @@ This file defines the build milestones and the gating protocol between Agent 1 (
 | M5 — Home Screen (Anonymous) | **DONE** |
 | M6 — Video Player Core | **DONE** |
 | M7 — Search + History | **DONE** |
-| M8 — Video Play Screen (Full Layout) | Pending |
+| M8 — Video Play Screen (Full Layout) | **Partial** |
 | M9–M12 | Pending |
 
 ## Gating Protocol (MANDATORY)
@@ -127,7 +127,7 @@ Acceptance:
 - **Known limitations:** None for M7 scope. Video search is single page (no pagination in UI yet).
 
 ### M8 — Video Play Screen (Full Layout)
-**Status: Pending**
+**Status: Partial**
 Deliverables:
 - Video play screen layout per UI.md “Video play screen (target)” and reference designs:
   - **Video info:** Title, views, relative time, expandable description/hashtags.
@@ -139,6 +139,16 @@ Deliverables:
 Acceptance:
 - Video play screen shows full layout (info, channel, engagement row, comments, related); placeholders/stubs OK for auth-only actions and missing backend.
 - flutter analyze/test green
+
+**M8 partial summary (proceeding):**
+- **Done:** Full layout (info, channel row with avatar from videoprocess URL, engagement row stubs, comments section with list + input stub, related videos grid). Related API parsing fixed: response uses `relatedVideos` (added to HomeFeedResponse) and duration as string (e.g. `"8053.000"`) — both supported in VideoItem. Channel avatars use `ApiConfig.resolveMediaUrl` (videoprocess host). All engagement actions and Subscribe show login/stub until M9.
+- **Remaining issues (partial completion):**
+  1. **Comments:** If backend returns comments under a different key or shape, parsing may show 0 comments; verify against real API response and align `VideoCommentsResponse`/comment list if needed.
+  2. **Related pagination:** Related endpoint may support `page`/`hasMore`; UI currently shows single page only (no "Load more" for related).
+  3. **Main-thread jank:** Logs show "Skipped 52 frames" on cold start / opening player; optional deferral or offloading for smoother first paint.
+  4. **Comment reply UI:** Reply threading or nested replies may be minimal/stub; full reply flow gated to M9.
+- **How to test:** Open a video from home → scroll below player; confirm title, views, time, description, channel row (avatar loads), engagement chips, comments section, related grid. Tap related video → navigates to same player. Run `flutter analyze` and `flutter test`.
+- **Proceeding:** M8 marked **Partial**; above items can be addressed in a follow-up or during M9 integration.
 
 ### M9 — Auth (Firebase) + Gating
 Deliverables:

@@ -66,6 +66,49 @@ void main() {
       expect(ApiConfig.resolveMediaUrl(null), '');
       expect(ApiConfig.resolveMediaUrl(''), '');
     });
+
+    test('resolveApiAssetUrl returns full URL unchanged', () {
+      const full = 'https://example.com/processed/channels/logo.jpg';
+      expect(ApiConfig.resolveApiAssetUrl(full, 'http://api.test'), full);
+      expect(ApiConfig.resolveApiAssetUrl('http://other.com/x', 'http://api.test'), 'http://other.com/x');
+    });
+
+    test('resolveApiAssetUrl prepends baseUrl for relative path', () {
+      expect(
+        ApiConfig.resolveApiAssetUrl('/processed/channels/logo-123.jpg', 'http://10.0.2.2:3000'),
+        'http://10.0.2.2:3000/processed/channels/logo-123.jpg',
+      );
+      expect(
+        ApiConfig.resolveApiAssetUrl('processed/rel.jpg', 'https://api.test'),
+        'https://api.test/processed/rel.jpg',
+      );
+    });
+
+    test('resolveApiAssetUrl with empty baseUrl returns path unchanged', () {
+      expect(
+        ApiConfig.resolveApiAssetUrl('/processed/channels/logo.jpg', ''),
+        '/processed/channels/logo.jpg',
+      );
+    });
+
+    test('resolveApiAssetUrl returns empty for null or empty urlOrPath', () {
+      expect(ApiConfig.resolveApiAssetUrl(null, 'http://api.test'), '');
+      expect(ApiConfig.resolveApiAssetUrl('', 'http://api.test'), '');
+    });
+
+    test('videoCommentsUrl builds path with videoId and page', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      final uri = config.videoCommentsUrl('vid-1', page: 2, limit: 10);
+      expect(uri.path, '/api/videos/vid-1/comments');
+      expect(uri.queryParameters['page'], '2');
+      expect(uri.queryParameters['limit'], '10');
+    });
+
+    test('relatedVideosUrl builds path', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      final uri = config.relatedVideosUrl('vid-2');
+      expect(uri.path, '/api/video/vid-2/related');
+    });
   });
 
   group('ApiClient', () {

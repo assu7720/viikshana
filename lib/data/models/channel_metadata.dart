@@ -4,17 +4,25 @@ class ChannelMetadata {
     required this.id,
     this.name,
     this.avatarUrl,
+    this.subscriberCount,
   });
 
   final String id;
   final String? name;
   final String? avatarUrl;
+  /// Subscriber count when available (e.g. from video detail channel).
+  final int? subscriberCount;
 
   factory ChannelMetadata.fromJson(Map<String, dynamic> json) {
+    final sub = json['subscriberCount'];
+    final int? subCount = sub == null
+        ? null
+        : (sub is int ? sub : int.tryParse(sub.toString()));
     return ChannelMetadata(
       id: _stringFromJson(json['id']) ?? '',
       name: _stringFromJson(json['name']),
       avatarUrl: _stringFromJson(json['avatarUrl'] ?? json['logo']),
+      subscriberCount: subCount,
     );
   }
 
@@ -30,6 +38,7 @@ class ChannelMetadata {
       'id': id,
       if (name != null) 'name': name,
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
+      if (subscriberCount != null) 'subscriberCount': subscriberCount,
     };
   }
 }

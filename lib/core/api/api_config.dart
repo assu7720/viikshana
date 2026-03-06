@@ -66,6 +66,26 @@ class ApiConfig {
     );
   }
 
+  /// GET /api/videos/{id}/comments (paginated).
+  String videoCommentsPath(String videoId) => '/api/videos/$videoId/comments';
+
+  Uri videoCommentsUrl(String videoId, {int page = 1, int limit = 20}) {
+    return Uri.parse(baseUrl).replace(
+      path: videoCommentsPath(videoId),
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.clamp(1, 100).toString(),
+      },
+    );
+  }
+
+  /// GET /api/video/{id}/related (related/recommended videos; same shape as home feed).
+  String relatedVideosPath(String videoId) => '/api/video/$videoId/related';
+
+  Uri relatedVideosUrl(String videoId) {
+    return Uri.parse(baseUrl).replace(path: relatedVideosPath(videoId));
+  }
+
   /// Resolves a thumbnail or video URL. If [urlOrPath] is relative (starts with /), prepends [mediaBaseUrl].
   static String resolveMediaUrl(String? urlOrPath) {
     if (urlOrPath == null || urlOrPath.isEmpty) return urlOrPath ?? '';
@@ -73,6 +93,19 @@ class ApiConfig {
       return urlOrPath;
     }
     final base = mediaBaseUrl.endsWith('/') ? mediaBaseUrl : '$mediaBaseUrl/';
+    final path = urlOrPath.startsWith('/') ? urlOrPath.substring(1) : urlOrPath;
+    return base + path;
+  }
+
+  /// Resolves a relative URL for API-served assets (e.g. channel logos at /processed/channels/...).
+  /// Use when the asset is served from the same host as [baseUrl]. Leaves absolute URLs unchanged.
+  static String resolveApiAssetUrl(String? urlOrPath, String baseUrl) {
+    if (urlOrPath == null || urlOrPath.isEmpty) return urlOrPath ?? '';
+    if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+      return urlOrPath;
+    }
+    if (baseUrl.isEmpty) return urlOrPath;
+    final base = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
     final path = urlOrPath.startsWith('/') ? urlOrPath.substring(1) : urlOrPath;
     return base + path;
   }

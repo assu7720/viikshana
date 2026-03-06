@@ -108,6 +108,107 @@ void main() {
       expect(b.hlsUrl, 'https://hls/id-b.m3u8');
     });
   });
+
+  group('relatedVideosProvider', () {
+    test('loads related videos from API', () async {
+      final mockClient = _MockClient((request) async {
+        if (request.url.path.contains('related')) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'relatedVideos': [
+                {'id': 'r1', 'title': 'Related One', 'views': 1, 'channel': {'id': 1, 'name': 'Ch'}},
+                {'id': 'r2', 'title': 'Related Two', 'views': 2, 'channel': {'id': 1, 'name': 'Ch'}},
+              ],
+              'hasMore': false,
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWith(
+            (ref) => ApiClient(config: ApiConfig(baseUrl: 'https://test'), client: mockClient),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final response = await container.read(relatedVideosProvider('vid1').future);
+      expect(response.videos.length, 2);
+      expect(response.videos[0].id, 'r1');
+      expect(response.videos[0].title, 'Related One');
+      expect(response.videos[1].id, 'r2');
+    });
+
+    test('mock config returns empty related', () async {
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWith(
+            (ref) => ApiClient(config: ApiConfig(baseUrl: '')),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final response = await container.read(relatedVideosProvider('any').future);
+      expect(response.videos, isEmpty);
+    });
+  });
+
+  group('videoCommentsProvider', () {
+    test('loads comments from API', () async {
+      final mockClient = _MockClient((request) async {
+        if (request.url.path.contains('comments')) {
+          return http.Response(
+            jsonEncode({
+              'comments': [
+                {'id': 1, 'videoId': 'v1', 'userId': 10, 'text': 'First comment', 'username': 'u1'},
+                {'id': 2, 'videoId': 'v1', 'userId': 20, 'text': 'Second', 'username': 'u2'},
+              ],
+              'page': 1,
+              'total': 2,
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWith(
+            (ref) => ApiClient(config: ApiConfig(baseUrl: 'https://test'), client: mockClient),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final response = await container.read(videoCommentsProvider('v1').future);
+      expect(response.comments.length, 2);
+      expect(response.comments[0].text, 'First comment');
+      expect(response.comments[0].username, 'u1');
+      expect(response.comments[1].text, 'Second');
+      expect(response.page, 1);
+      expect(response.total, 2);
+    });
+
+    test('mock config returns empty comments', () async {
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWith(
+            (ref) => ApiClient(config: ApiConfig(baseUrl: '')),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final response = await container.read(videoCommentsProvider('any').future);
+      expect(response.comments, isEmpty);
+      expect(response.page, 1);
+    });
+  });
 }
 
 class _MockClient extends http.BaseClient {

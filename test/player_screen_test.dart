@@ -26,9 +26,9 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Video'), findsOneWidget);
+      expect(find.text('Sample (mock)'), findsAtLeast(1));
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
 
@@ -48,10 +48,9 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsAtLeast(1));
 
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
 
       expect(find.text('No playable stream'), findsNothing);
       expect(find.textContaining('Could not load video'), findsNothing);

@@ -38,11 +38,23 @@ class VideoItem {
       channelId: channelId,
       channelName: channelName,
       viewCount: _parseInt(json['views'] ?? json['viewCount'], 0),
-      durationSeconds: _parseInt(json['duration'] ?? json['durationSeconds'], 0),
+      durationSeconds: _parseDurationSeconds(json['duration'] ?? json['durationSeconds']),
       publishedAt: (json['createdAt'] ?? json['publishedAt']) != null
           ? DateTime.tryParse((json['createdAt'] ?? json['publishedAt']) as String)
           : null,
     );
+  }
+
+  /// Parses duration from API: may be int, double, or string (e.g. "8053.000").
+  static int _parseDurationSeconds(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    if (v is double) return v.round();
+    if (v is String) {
+      final d = double.tryParse(v);
+      return d != null ? d.round() : 0;
+    }
+    return 0;
   }
 
   Map<String, dynamic> toJson() {

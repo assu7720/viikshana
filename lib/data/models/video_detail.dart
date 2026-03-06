@@ -18,6 +18,7 @@ class VideoDetail {
     this.likeCount = 0,
     this.commentCount = 0,
     this.channel,
+    this.description,
   });
 
   final String id;
@@ -33,6 +34,8 @@ class VideoDetail {
   final int likeCount;
   final int commentCount;
   final ChannelMetadata? channel;
+  /// Video description / hashtags (expandable in UI).
+  final String? description;
 
   /// Tries common API keys for HLS playlist URL; supports nested playback/streams.
   static String? _parseHlsUrl(Map<String, dynamic> json) {
@@ -111,6 +114,7 @@ class VideoDetail {
               json['channel'] as Map<String, dynamic>,
             )
           : null,
+      description: _stringValue(json['description'] ?? json['desc']),
     );
   }
 
@@ -128,6 +132,7 @@ class VideoDetail {
       'likeCount': likeCount,
       'commentCount': commentCount,
       if (channel != null) 'channel': channel!.toJson(),
+      if (description != null) 'description': description,
     };
   }
 

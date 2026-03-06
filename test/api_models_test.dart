@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:viikshana/data/models/channel_metadata.dart';
+import 'package:viikshana/data/models/comment.dart';
 import 'package:viikshana/data/models/home_feed_response.dart';
 import 'package:viikshana/data/models/video_detail.dart';
 import 'package:viikshana/data/models/video_item.dart';
@@ -75,6 +76,24 @@ void main() {
         item.thumbnailUrl,
         'https://videoprocess.viikshana.com/processed/abc/thumbnail.jpg',
       );
+    });
+
+    test('parses duration as string (e.g. related API "8053.000")', () {
+      final item = VideoItem.fromJson({
+        'id': 'v1',
+        'title': 'T',
+        'duration': '8053.000',
+      });
+      expect(item.durationSeconds, 8053);
+    });
+
+    test('parses duration as double', () {
+      final item = VideoItem.fromJson({
+        'id': 'v1',
+        'title': 'T',
+        'duration': 6017.0,
+      });
+      expect(item.durationSeconds, 6017);
     });
   });
 
@@ -213,6 +232,40 @@ void main() {
       expect(r.page, 2);
     });
 
+    test('parses related API shape: relatedVideos and string duration', () {
+      final json = {
+        'success': true,
+        'relatedVideos': [
+          {
+            'id': '6DJ9sI',
+            'title': 'Valiyava - 2017 Malayalam Action Movie',
+            'thumbnailHome': 'https://videoprocess.viikshana.com/processed/6DJ9sI/thumbnail_home_1772776987048.jpg',
+            'views': 0,
+            'duration': '8053.000',
+            'channel': {'id': 4, 'name': 'Movie Market', 'handle': 'moviemarket'},
+          },
+          {
+            'id': 'i404SV',
+            'title': 'Balraju Latest Romantic Action',
+            'thumbnail': 'https://videoprocess.viikshana.com/processed/i404SV/thumbnail.jpg',
+            'views': 5,
+            'duration': 6017.0,
+            'channel': {'id': 4, 'name': 'Movie Market'},
+          },
+        ],
+        'hasMore': false,
+      };
+      final r = HomeFeedResponse.fromJson(json);
+      expect(r.videos.length, 2);
+      expect(r.videos[0].id, '6DJ9sI');
+      expect(r.videos[0].durationSeconds, 8053);
+      expect(r.videos[0].channelName, 'Movie Market');
+      expect(r.videos[1].id, 'i404SV');
+      expect(r.videos[1].durationSeconds, 6017);
+      expect(r.videos[1].viewCount, 5);
+      expect(r.hasMore, false);
+    });
+
     test('toJson round-trip', () {
       final r = HomeFeedResponse.fromJson({
         'videos': [
@@ -229,6 +282,114 @@ void main() {
       expect(back.page, 1);
       expect(back.limit, 10);
       expect(back.total, 1);
+    });
+  });
+
+  group('Comment.fromJson', () {
+    test('parses minimal valid JSON', () {
+      final json = {
+        'id': 1,
+        'videoId': 'v1',
+        'userId': 10,
+        'text': 'Hello',
+      };
+      final c = Comment.fromJson(json);
+      expect(c.id, 1);
+      expect(c.videoId, 'v1');
+      expect(c.userId, 10);
+      expect(c.text, 'Hello');
+      expect(c.username, isNull);
+      expect(c.parentCommentId, isNull);
+      expect(c.createdAt, isNull);
+      expect(c.updatedAt, isNull);
+      expect(c.replies, isEmpty);
+    });
+
+    test('parses full JSON with username and dates', () {
+      final json = {
+        'id': 2,
+        'videoId': 'v2',
+        'userId': 20,
+        'username': 'viewer1',
+        'text': 'Great video!',
+        'parentCommentId': null,
+        'createdAt': '2024-06-01T12:00:00Z',
+        'updatedAt': '2024-06-01T12:05:00Z',
+      };
+      final c = Comment.fromJson(json);
+      expect(c.id, 2);
+      expect(c.username, 'viewer1');
+      expect(c.text, 'Great video!');
+      expect(c.createdAt, isNotNull);
+      expect(c.updatedAt, isNotNull);
+    });
+
+    test('parses userName as username fallback', () {
+      final c = Comment.fromJson({
+        'id': 1,
+        'videoId': 'v1',
+        'userId': 1,
+        'text': 'x',
+        'userName': 'alias',
+      });
+      expect(c.username, 'alias');
+    });
+
+    test('parses nested replies', () {
+      final json = {
+        'id': 1,
+        'videoId': 'v1',
+        'userId': 1,
+        'text': 'Parent',
+        'replies': [
+          {'id': 2, 'videoId': 'v1', 'userId': 2, 'text': 'Reply'},
+        ],
+      };
+      final c = Comment.fromJson(json);
+      expect(c.replies.length, 1);
+      expect(c.replies.first.id, 2);
+      expect(c.replies.first.text, 'Reply');
+    });
+  });
+
+  group('VideoCommentsResponse.fromJson', () {
+    test('parses empty comments list', () {
+      final r = VideoCommentsResponse.fromJson({'comments': [], 'page': 1});
+      expect(r.comments, isEmpty);
+      expect(r.page, 1);
+      expect(r.total, isNull);
+    });
+
+    test('parses comments key', () {
+      final json = {
+        'comments': [
+          {'id': 1, 'videoId': 'v1', 'userId': 1, 'text': 'First'},
+        ],
+        'page': 1,
+        'total': 1,
+      };
+      final r = VideoCommentsResponse.fromJson(json);
+      expect(r.comments.length, 1);
+      expect(r.comments.first.text, 'First');
+      expect(r.page, 1);
+      expect(r.total, 1);
+    });
+
+    test('parses data key as comments fallback', () {
+      final r = VideoCommentsResponse.fromJson({
+        'data': [
+          {'id': 1, 'videoId': 'v1', 'userId': 1, 'text': 'From data'},
+        ],
+        'page': 2,
+      });
+      expect(r.comments.length, 1);
+      expect(r.comments.first.text, 'From data');
+      expect(r.page, 2);
+    });
+
+    test('handles missing list', () {
+      final r = VideoCommentsResponse.fromJson({'page': 1});
+      expect(r.comments, isEmpty);
     });
   });
 }

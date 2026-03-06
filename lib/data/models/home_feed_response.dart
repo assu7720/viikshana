@@ -3,6 +3,7 @@ import 'package:viikshana/data/models/video_item.dart';
 /// Response for GET /api/home/videos and GET /api/search/videos.
 /// Home: success, regularVideos[], hasMore, nextPage.
 /// Search (API.md): success, data[], hasMore, nextPage.
+/// Related (GET /api/video/{id}/related): success, relatedVideos[], hasMore.
 class HomeFeedResponse {
   const HomeFeedResponse({
     required this.videos,
@@ -23,7 +24,7 @@ class HomeFeedResponse {
   final int? nextPage;
 
   factory HomeFeedResponse.fromJson(Map<String, dynamic> json) {
-    final list = json['regularVideos'] ?? json['videos'] ?? json['data'];
+    final list = json['regularVideos'] ?? json['videos'] ?? json['relatedVideos'] ?? json['data'];
     final List<VideoItem> videos = list is List
         ? list
             .map((e) => VideoItem.fromJson(e as Map<String, dynamic>))

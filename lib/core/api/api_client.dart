@@ -7,6 +7,7 @@ import 'package:viikshana/core/api/api_config.dart';
 import 'package:viikshana/core/api/api_exception.dart';
 import 'package:viikshana/data/models/home_feed_response.dart';
 import 'package:viikshana/data/models/video_detail.dart';
+import 'package:viikshana/data/models/comment.dart';
 
 /// HTTP client for ClipsNow API with base URL config, retries, and error handling.
 class ApiClient {
@@ -120,6 +121,44 @@ class ApiClient {
     if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
     final result = _parseJson(response, HomeFeedResponse.fromJson);
     if (kDebugMode) debugPrint('[API] searchVideos returned: ${result.videos.length} (page=$page)');
+    return result;
+  }
+
+  /// GET /api/videos/{id}/comments (paginated).
+  /// When [ApiConfig.isMock] is true, returns empty comments without network.
+  Future<VideoCommentsResponse> getVideoComments(
+    String videoId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    if (videoId.isEmpty) return const VideoCommentsResponse();
+    if (_config.isMock) {
+      if (kDebugMode) debugPrint('[API] getVideoComments (mock): no network call');
+      return const VideoCommentsResponse();
+    }
+    final uri = _config.videoCommentsUrl(videoId, page: page, limit: limit);
+    if (kDebugMode) debugPrint('[API] OUTGOING: GET $uri');
+    final response = await _request(() => _client.get(uri));
+    if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
+    final result = _parseJson(response, VideoCommentsResponse.fromJson);
+    if (kDebugMode) debugPrint('[API] getVideoComments returned: ${result.comments.length}');
+    return result;
+  }
+
+  /// GET /api/video/{id}/related. Returns same shape as home feed.
+  /// When [ApiConfig.isMock] is true, returns empty list without network.
+  Future<HomeFeedResponse> getRelatedVideos(String videoId) async {
+    if (videoId.isEmpty) return const HomeFeedResponse(videos: []);
+    if (_config.isMock) {
+      if (kDebugMode) debugPrint('[API] getRelatedVideos (mock): no network call');
+      return const HomeFeedResponse(videos: []);
+    }
+    final uri = _config.relatedVideosUrl(videoId);
+    if (kDebugMode) debugPrint('[API] OUTGOING: GET $uri');
+    final response = await _request(() => _client.get(uri));
+    if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
+    final result = _parseJson(response, HomeFeedResponse.fromJson);
+    if (kDebugMode) debugPrint('[API] getRelatedVideos returned: ${result.videos.length}');
     return result;
   }
 
