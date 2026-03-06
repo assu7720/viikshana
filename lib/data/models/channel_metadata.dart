@@ -5,6 +5,7 @@ class ChannelMetadata {
     this.name,
     this.avatarUrl,
     this.subscriberCount,
+    this.isSubscribed,
   });
 
   final String id;
@@ -12,6 +13,8 @@ class ChannelMetadata {
   final String? avatarUrl;
   /// Subscriber count when available (e.g. from video detail channel).
   final int? subscriberCount;
+  /// When true, current user is subscribed to this channel (only when authenticated).
+  final bool? isSubscribed;
 
   factory ChannelMetadata.fromJson(Map<String, dynamic> json) {
     final sub = json['subscriberCount'];
@@ -23,6 +26,7 @@ class ChannelMetadata {
       name: _stringFromJson(json['name']),
       avatarUrl: _stringFromJson(json['avatarUrl'] ?? json['logo']),
       subscriberCount: subCount,
+      isSubscribed: json.containsKey('isSubscribed') ? json['isSubscribed'] == true : null,
     );
   }
 
@@ -39,6 +43,7 @@ class ChannelMetadata {
       if (name != null) 'name': name,
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
       if (subscriberCount != null) 'subscriberCount': subscriberCount,
+      if (isSubscribed != null) 'isSubscribed': isSubscribed,
     };
   }
 }

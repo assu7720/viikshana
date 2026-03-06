@@ -96,6 +96,39 @@ class ApiConfig {
 
   Uri get authMeUrl => Uri.parse(baseUrl).replace(path: authMePath);
 
+  /// POST /api/videos/{id}/like — toggle like (auth required).
+  String videoLikePath(String videoId) => '/api/videos/$videoId/like';
+  Uri videoLikeUrl(String videoId) => Uri.parse(baseUrl).replace(path: videoLikePath(videoId));
+
+  /// DELETE /api/videos/{id}/like — remove like (auth required).
+  /// Same path as like; method is DELETE.
+
+  /// POST /api/videos/{id}/dislike — toggle dislike (auth required).
+  String videoDislikePath(String videoId) => '/api/videos/$videoId/dislike';
+  Uri videoDislikeUrl(String videoId) => Uri.parse(baseUrl).replace(path: videoDislikePath(videoId));
+
+  /// DELETE /api/videos/{id}/dislike — remove dislike (auth required).
+
+  /// POST /api/subscribe/{channelId} (auth required).
+  String subscribePath(String channelId) => '/api/subscribe/$channelId';
+  Uri subscribeUrl(String channelId) => Uri.parse(baseUrl).replace(path: subscribePath(channelId));
+
+  /// POST /api/unsubscribe/{channelId} (auth required).
+  String unsubscribePath(String channelId) => '/api/unsubscribe/$channelId';
+  Uri unsubscribeUrl(String channelId) => Uri.parse(baseUrl).replace(path: unsubscribePath(channelId));
+
+  /// GET /api/channels/{channelId}/subscription — check if current user subscribed.
+  String subscriptionPath(String channelId) => '/api/channels/$channelId/subscription';
+  Uri subscriptionUrl(String channelId) => Uri.parse(baseUrl).replace(path: subscriptionPath(channelId));
+
+  /// POST /api/comments — body videoId + text (auth required).
+  String get postCommentPath => '/api/comments';
+  Uri get postCommentUrl => Uri.parse(baseUrl).replace(path: postCommentPath);
+
+  /// POST /api/comments/reply — body parentCommentId + text (auth required).
+  String get replyCommentPath => '/api/comments/reply';
+  Uri get replyCommentUrl => Uri.parse(baseUrl).replace(path: replyCommentPath);
+
   /// Resolves a thumbnail or video URL. If [urlOrPath] is relative (starts with /), prepends [mediaBaseUrl].
   static String resolveMediaUrl(String? urlOrPath) {
     if (urlOrPath == null || urlOrPath.isEmpty) return urlOrPath ?? '';

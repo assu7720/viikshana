@@ -109,6 +109,29 @@ void main() {
       final uri = config.relatedVideosUrl('vid-2');
       expect(uri.path, '/api/video/vid-2/related');
     });
+
+    test('videoLikeUrl builds path', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      final uri = config.videoLikeUrl('v1');
+      expect(uri.path, '/api/videos/v1/like');
+    });
+
+    test('videoDislikeUrl builds path', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      expect(config.videoDislikeUrl('v1').path, '/api/videos/v1/dislike');
+    });
+
+    test('subscribeUrl and unsubscribeUrl build paths', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      expect(config.subscribeUrl('ch1').path, '/api/subscribe/ch1');
+      expect(config.unsubscribeUrl('ch1').path, '/api/unsubscribe/ch1');
+    });
+
+    test('postCommentUrl and replyCommentUrl paths', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      expect(config.postCommentUrl.path, '/api/comments');
+      expect(config.replyCommentUrl.path, '/api/comments/reply');
+    });
   });
 
   group('ApiClient', () {
@@ -484,6 +507,150 @@ void main() {
       final client = ApiClient(config: ApiConfig(baseUrl: ''));
       final profile = await client.getMe();
       expect(profile, isNull);
+    });
+
+    test('likeVideo parses 200 response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/api/videos/vid-x/like');
+        return http.Response(jsonEncode({'success': true, 'likes': 10, 'dislikes': 1, 'isActive': true}), 200);
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 'token',
+      );
+      final result = await client.likeVideo('vid-x');
+      expect(result.likes, 10);
+      expect(result.dislikes, 1);
+      expect(result.liked, true);
+    });
+
+    test('removeLike parses 200 response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'DELETE');
+        return http.Response(jsonEncode({'success': true, 'liked': false, 'likes': 9, 'dislikes': 1}), 200);
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final result = await client.removeLike('vid-x');
+      expect(result.liked, false);
+      expect(result.likes, 9);
+    });
+
+    test('subscribe parses 200 response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/api/subscribe/ch1');
+        return http.Response(jsonEncode({'success': true, 'subscriberCount': 100, 'isSubscribed': true}), 200);
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final result = await client.subscribe('ch1');
+      expect(result.subscriberCount, 100);
+      expect(result.isSubscribed, true);
+    });
+
+    test('unsubscribe parses 200 response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.url.path, '/api/unsubscribe/ch1');
+        return http.Response(jsonEncode({'success': true, 'subscriberCount': 99, 'isSubscribed': false}), 200);
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final result = await client.unsubscribe('ch1');
+      expect(result.isSubscribed, false);
+      expect(result.subscriberCount, 99);
+    });
+
+    test('subscribe 400 "Already subscribed" returns isSubscribed true', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.url.path, '/api/subscribe/ch1');
+        return http.Response(
+          jsonEncode({'success': false, 'message': 'Already subscribed to this channel'}),
+          400,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final result = await client.subscribe('ch1');
+      expect(result.isSubscribed, true);
+    });
+
+    test('dislikeVideo parses 200 response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/api/videos/v1/dislike');
+        return http.Response(jsonEncode({'success': true, 'dislikes': 2, 'disliked': true}), 200);
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final result = await client.dislikeVideo('v1');
+      expect(result.dislikes, 2);
+      expect(result.disliked, true);
+    });
+
+    test('removeDislike parses 200 response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'DELETE');
+        expect(request.url.path, '/api/videos/v1/dislike');
+        return http.Response(jsonEncode({'dislikes': 1, 'disliked': false}), 200);
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final result = await client.removeDislike('v1');
+      expect(result.disliked, false);
+      expect(result.dislikes, 1);
+    });
+
+    test('postComment parses 200 response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/api/comments');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'comment': {'id': 1, 'videoId': 'v1', 'userId': 10, 'text': 'Hello', 'username': 'u1'},
+          }),
+          200,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://api.test'),
+        client: mockClient,
+        getAccessToken: () => 't',
+      );
+      final comment = await client.postComment('v1', 'Hello');
+      expect(comment.id, 1);
+      expect(comment.videoId, 'v1');
+      expect(comment.text, 'Hello');
+      expect(comment.username, 'u1');
+    });
+
+    test('likeVideo throws when not authenticated', () async {
+      final client = ApiClient(config: ApiConfig(baseUrl: 'https://api.test'));
+      expect(
+        () => client.likeVideo('v1'),
+        throwsA(isA<ApiException>().having((e) => e.requiresLogin, 'requiresLogin', true)),
+      );
     });
   });
 }

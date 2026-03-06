@@ -19,6 +19,10 @@ class VideoDetail {
     this.commentCount = 0,
     this.channel,
     this.description,
+    this.likedByMe,
+    this.dislikeCount = 0,
+    this.dislikedByMe,
+    this.subscribedToChannel,
   });
 
   final String id;
@@ -36,6 +40,13 @@ class VideoDetail {
   final ChannelMetadata? channel;
   /// Video description / hashtags (expandable in UI).
   final String? description;
+  /// When true, current user has liked this video (only when authenticated).
+  final bool? likedByMe;
+  final int dislikeCount;
+  /// When true, current user has disliked this video (only when authenticated).
+  final bool? dislikedByMe;
+  /// When true, current user is subscribed to this video's channel (only when authenticated).
+  final bool? subscribedToChannel;
 
   /// Tries common API keys for HLS playlist URL; supports nested playback/streams.
   static String? _parseHlsUrl(Map<String, dynamic> json) {
@@ -91,12 +102,16 @@ class VideoDetail {
   }
 
   factory VideoDetail.fromJson(Map<String, dynamic> json) {
+    final channelMap = json['channel'];
+    final channel = channelMap is Map<String, dynamic>
+        ? ChannelMetadata.fromJson(channelMap)
+        : null;
     return VideoDetail(
       id: _stringValue(json['id']) ?? '',
       title: _stringValue(json['title']) ?? '',
       thumbnailUrl: _stringValue(json['thumbnailUrl'] ?? json['thumbnail'] ?? json['thumbnailHome']),
       channelId: _stringValue(json['channelId']),
-      channelName: _stringValue(json['channelName']),
+      channelName: _stringValue(json['channelName']) ?? channel?.name,
       viewCount: VideoItem.parseInt(json['viewCount'] ?? json['views'], 0),
       durationSeconds: _parseDurationSeconds(json['durationSeconds'] ?? json['duration']),
       publishedAt: json['publishedAt'] != null
@@ -107,14 +122,18 @@ class VideoDetail {
         if (raw == null || raw.isEmpty) return null;
         return ApiConfig.resolveMediaUrl(raw);
       }(),
-      likeCount: VideoItem.parseInt(json['likeCount'], 0),
-      commentCount: VideoItem.parseInt(json['commentCount'], 0),
-      channel: json['channel'] != null
-          ? ChannelMetadata.fromJson(
-              json['channel'] as Map<String, dynamic>,
-            )
-          : null,
+      likeCount: VideoItem.parseInt(json['likeCount'] ?? json['likes'], 0),
+      commentCount: VideoItem.parseInt(json['commentCount'] ?? json['comments'], 0),
+      channel: channel,
       description: _stringValue(json['description'] ?? json['desc']),
+      likedByMe: json.containsKey('likedByMe') ? json['likedByMe'] == true : null,
+      dislikeCount: VideoItem.parseInt(json['dislikeCount'] ?? json['dislikes'], 0),
+      dislikedByMe: json.containsKey('dislikedByMe') ? json['dislikedByMe'] == true : null,
+      subscribedToChannel: json.containsKey('subscribedToChannel')
+          ? json['subscribedToChannel'] == true
+          : (json.containsKey('subscribed_to_channel')
+              ? json['subscribed_to_channel'] == true
+              : (json.containsKey('subscribed') ? json['subscribed'] == true : null)),
     );
   }
 
@@ -133,6 +152,10 @@ class VideoDetail {
       'commentCount': commentCount,
       if (channel != null) 'channel': channel!.toJson(),
       if (description != null) 'description': description,
+      if (likedByMe != null) 'likedByMe': likedByMe,
+      'dislikeCount': dislikeCount,
+      if (dislikedByMe != null) 'dislikedByMe': dislikedByMe,
+      if (subscribedToChannel != null) 'subscribedToChannel': subscribedToChannel,
     };
   }
 

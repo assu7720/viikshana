@@ -112,6 +112,15 @@ void main() {
       expect(full.name, 'My Channel');
       expect(full.avatarUrl, 'https://example.com/avatar.png');
     });
+
+    test('parses isSubscribed when present', () {
+      final sub = ChannelMetadata.fromJson({'id': 'c1', 'isSubscribed': true});
+      expect(sub.isSubscribed, true);
+      final unsub = ChannelMetadata.fromJson({'id': 'c2', 'isSubscribed': false});
+      expect(unsub.isSubscribed, false);
+      final noKey = ChannelMetadata.fromJson({'id': 'c3'});
+      expect(noKey.isSubscribed, isNull);
+    });
   });
 
   group('VideoDetail.fromJson', () {
@@ -167,6 +176,36 @@ void main() {
         d.hlsUrl,
         'https://videoprocess.viikshana.com/processed/fr1zWx/360p/playlist.m3u8',
       );
+    });
+
+    test('parses likedByMe when present', () {
+      final d = VideoDetail.fromJson({'id': 'v1', 'title': 'T', 'likedByMe': true});
+      expect(d.likedByMe, true);
+      final d2 = VideoDetail.fromJson({'id': 'v2', 'title': 'T', 'likedByMe': false});
+      expect(d2.likedByMe, false);
+      final d3 = VideoDetail.fromJson({'id': 'v3', 'title': 'T'});
+      expect(d3.likedByMe, isNull);
+    });
+
+    test('parses likes and dislikes from API keys', () {
+      final d = VideoDetail.fromJson({'id': 'v1', 'title': 'T', 'likes': 10, 'dislikes': 2});
+      expect(d.likeCount, 10);
+      expect(d.dislikeCount, 2);
+      final d2 = VideoDetail.fromJson({'id': 'v2', 'title': 'T', 'likeCount': 5, 'dislikeCount': 0});
+      expect(d2.likeCount, 5);
+      expect(d2.dislikeCount, 0);
+    });
+
+    test('parses dislikedByMe and subscribedToChannel when present', () {
+      final d = VideoDetail.fromJson({'id': 'v1', 'title': 'T', 'dislikedByMe': true});
+      expect(d.dislikedByMe, true);
+      final d2 = VideoDetail.fromJson({'id': 'v2', 'title': 'T', 'subscribedToChannel': true});
+      expect(d2.subscribedToChannel, true);
+      final d3 = VideoDetail.fromJson({'id': 'v3', 'title': 'T', 'subscribed_to_channel': true});
+      expect(d3.subscribedToChannel, true);
+      final d4 = VideoDetail.fromJson({'id': 'v4', 'title': 'T'});
+      expect(d4.dislikedByMe, isNull);
+      expect(d4.subscribedToChannel, isNull);
     });
   });
 

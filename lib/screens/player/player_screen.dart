@@ -6,7 +6,9 @@ import 'package:video_player/video_player.dart';
 import 'package:viikshana/core/auth/auth_provider.dart';
 import 'package:viikshana/core/providers/player_providers.dart';
 import 'package:viikshana/core/providers/video_detail_provider.dart';
+import 'package:viikshana/core/providers/home_feed_provider.dart';
 import 'package:viikshana/core/api/api_config.dart';
+import 'package:viikshana/core/api/api_exception.dart';
 import 'package:viikshana/core/watch_history/watch_history_repository.dart';
 import 'package:viikshana/data/models/comment.dart';
 import 'package:viikshana/data/models/video_detail.dart';
@@ -170,8 +172,7 @@ class _PlayerBodyContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final user = ref.watch(currentUserProvider);
-    final isSignedIn = user != null;
+    final isSignedIn = ref.watch(isSignedInProvider);
     void onRequireLogin() {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sign in to comment, like, subscribe, and more')),
@@ -179,6 +180,10 @@ class _PlayerBodyContent extends ConsumerWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
       );
+    }
+    final apiClient = ref.read(apiClientProvider);
+    void onAfterEngagement() {
+      ref.invalidate(videoDetailProvider(videoId));
     }
     final commentsAsync = ref.watch(videoCommentsProvider(videoId));
     final relatedAsync = ref.watch(relatedVideosProvider(videoId));
@@ -210,9 +215,86 @@ class _PlayerBodyContent extends ConsumerWidget {
             _ExpandableDescription(text: detail.description!),
           ],
           const SizedBox(height: ViikshanaSpacing.md),
-          _ChannelRow(detail: detail, isSignedIn: isSignedIn, onRequireLogin: onRequireLogin),
+          _ChannelRow(
+            detail: detail,
+            isSignedIn: isSignedIn,
+            onRequireLogin: onRequireLogin,
+            subscribed: () {
+              final chId = detail.channelId ?? detail.channel?.id;
+              final fromDetail = (detail.subscribedToChannel ?? detail.channel?.isSubscribed) == true;
+              if (chId != null && ref.watch(optimisticSubscribedChannelIdsProvider).contains(chId)) return true;
+              return fromDetail;
+            }(),
+            onSubscribe: () async {
+              final chId = detail.channelId ?? detail.channel?.id;
+              if (chId == null || chId.isEmpty) return;
+              final isSubscribed = (detail.subscribedToChannel ?? detail.channel?.isSubscribed) == true ||
+                  ref.read(optimisticSubscribedChannelIdsProvider).contains(chId);
+              try {
+                if (isSubscribed) {
+                  await apiClient.unsubscribe(chId);
+                  ref.read(optimisticSubscribedChannelIdsProvider.notifier).update((s) => Set<String>.from(s)..remove(chId));
+                } else {
+                  await apiClient.subscribe(chId);
+                  ref.read(optimisticSubscribedChannelIdsProvider.notifier).update((s) => <String>{...s, chId});
+                }
+                onAfterEngagement();
+              } catch (e) {
+                if (context.mounted) {
+                  if (e is ApiException && e.requiresLogin) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to subscribe to channels')));
+                    onRequireLogin();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                }
+              }
+            },
+          ),
           const SizedBox(height: ViikshanaSpacing.md),
-          _EngagementRow(detail: detail, isSignedIn: isSignedIn, onRequireLogin: onRequireLogin),
+          _EngagementRow(
+            detail: detail,
+            isSignedIn: isSignedIn,
+            onRequireLogin: onRequireLogin,
+            onLike: () async {
+              try {
+                if (detail.likedByMe == true) {
+                  await apiClient.removeLike(videoId);
+                } else {
+                  await apiClient.likeVideo(videoId);
+                }
+                onAfterEngagement();
+              } catch (e) {
+                if (context.mounted) {
+                  if (e is ApiException && e.requiresLogin) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to like videos')));
+                    onRequireLogin();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                }
+              }
+            },
+            onDislike: () async {
+              try {
+                if (detail.dislikedByMe == true) {
+                  await apiClient.removeDislike(videoId);
+                } else {
+                  await apiClient.dislikeVideo(videoId);
+                }
+                onAfterEngagement();
+              } catch (e) {
+                if (context.mounted) {
+                  if (e is ApiException && e.requiresLogin) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to dislike videos')));
+                    onRequireLogin();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                }
+              }
+            },
+          ),
           const SizedBox(height: ViikshanaSpacing.md),
           SectionHeader(title: 'Comments ${detail.commentCount}'),
           const SizedBox(height: ViikshanaSpacing.sm),
@@ -228,13 +310,13 @@ class _PlayerBodyContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: ViikshanaSpacing.sm),
-          _CommentInputStub(
-            onTap: () {
-              if (isSignedIn) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment posting coming in M10')));
-              } else {
-                onRequireLogin();
-              }
+          _CommentInput(
+            videoId: videoId,
+            isSignedIn: isSignedIn,
+            onRequireLogin: onRequireLogin,
+            onCommentPosted: () {
+              ref.invalidate(videoCommentsProvider(videoId));
+              ref.invalidate(videoDetailProvider(videoId));
             },
           ),
           const SizedBox(height: ViikshanaSpacing.lg),
@@ -289,10 +371,18 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
 }
 
 class _ChannelRow extends StatelessWidget {
-  const _ChannelRow({required this.detail, required this.isSignedIn, required this.onRequireLogin});
+  const _ChannelRow({
+    required this.detail,
+    required this.isSignedIn,
+    required this.onRequireLogin,
+    required this.subscribed,
+    required this.onSubscribe,
+  });
   final VideoDetail detail;
   final bool isSignedIn;
   final VoidCallback onRequireLogin;
+  final bool subscribed;
+  final Future<void> Function() onSubscribe;
 
   @override
   Widget build(BuildContext context) {
@@ -323,10 +413,14 @@ class _ChannelRow extends StatelessWidget {
           ),
         ),
         FilledButton.tonal(
-          onPressed: () => isSignedIn
-              ? ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subscribe coming in M10')))
-              : onRequireLogin(),
-          child: const Text('Subscribe'),
+          onPressed: () {
+            if (isSignedIn) {
+              onSubscribe();
+            } else {
+              onRequireLogin();
+            }
+          },
+          child: Text(subscribed ? 'Unsubscribe' : 'Subscribe'),
         ),
       ],
     );
@@ -334,28 +428,56 @@ class _ChannelRow extends StatelessWidget {
 }
 
 class _EngagementRow extends StatelessWidget {
-  const _EngagementRow({required this.detail, required this.isSignedIn, required this.onRequireLogin});
+  const _EngagementRow({
+    required this.detail,
+    required this.isSignedIn,
+    required this.onRequireLogin,
+    required this.onLike,
+    required this.onDislike,
+  });
   final VideoDetail detail;
   final bool isSignedIn;
   final VoidCallback onRequireLogin;
+  final Future<void> Function() onLike;
+  final Future<void> Function() onDislike;
 
   @override
   Widget build(BuildContext context) {
-    void onTap() => isSignedIn
-        ? ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming in M10')))
+    void onTapOther() => isSignedIn
+        ? ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon')))
         : onRequireLogin();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ActionChip(icon: Icons.thumb_up_outlined, label: _formatCount(detail.likeCount), onTap: onTap),
-          _ActionChip(icon: Icons.thumb_down_outlined, label: 'Dislike', onTap: onTap),
-          _ActionChip(icon: Icons.share_outlined, label: 'Share', onTap: onTap),
-          _ActionChip(icon: Icons.download_outlined, label: 'Download', onTap: onTap),
-          _ActionChip(icon: Icons.playlist_add_outlined, label: 'Save', onTap: onTap),
-          _ActionChip(icon: Icons.volunteer_activism_outlined, label: 'Thanks', onTap: onTap),
-          _ActionChip(icon: Icons.flag_outlined, label: 'Report', onTap: onTap),
+          _ActionChip(
+            icon: detail.likedByMe == true ? Icons.thumb_up : Icons.thumb_up_outlined,
+            label: _formatCount(detail.likeCount),
+            onTap: () {
+              if (isSignedIn) {
+                onLike();
+              } else {
+                onRequireLogin();
+              }
+            },
+          ),
+          _ActionChip(
+            icon: detail.dislikedByMe == true ? Icons.thumb_down : Icons.thumb_down_outlined,
+            label: _formatCount(detail.dislikeCount),
+            onTap: () {
+              if (isSignedIn) {
+                onDislike();
+              } else {
+                onRequireLogin();
+              }
+            },
+          ),
+          _ActionChip(icon: Icons.share_outlined, label: 'Share', onTap: onTapOther),
+          _ActionChip(icon: Icons.download_outlined, label: 'Download', onTap: onTapOther),
+          _ActionChip(icon: Icons.playlist_add_outlined, label: 'Save', onTap: onTapOther),
+          _ActionChip(icon: Icons.volunteer_activism_outlined, label: 'Thanks', onTap: onTapOther),
+          _ActionChip(icon: Icons.flag_outlined, label: 'Report', onTap: onTapOther),
         ],
       ),
     );
@@ -486,6 +608,93 @@ class _CommentInputStub extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Comment input: when signed in shows field + submit; when not signed in tap prompts login.
+class _CommentInput extends ConsumerStatefulWidget {
+  const _CommentInput({
+    required this.videoId,
+    required this.isSignedIn,
+    required this.onRequireLogin,
+    required this.onCommentPosted,
+  });
+  final String videoId;
+  final bool isSignedIn;
+  final VoidCallback onRequireLogin;
+  final VoidCallback onCommentPosted;
+
+  @override
+  ConsumerState<_CommentInput> createState() => _CommentInputState();
+}
+
+class _CommentInputState extends ConsumerState<_CommentInput> {
+  final _controller = TextEditingController();
+  bool _isPosting = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _isPosting) return;
+    setState(() => _isPosting = true);
+    try {
+      await ref.read(apiClientProvider).postComment(widget.videoId, text);
+      _controller.clear();
+      widget.onCommentPosted();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment posted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        if (e is ApiException && e.requiresLogin) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to comment')));
+          widget.onRequireLogin();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isPosting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isSignedIn) {
+      return _CommentInputStub(
+        onTap: widget.onRequireLogin,
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            decoration: const InputDecoration(
+              hintText: 'Add a comment...',
+              border: OutlineInputBorder(),
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            maxLines: 2,
+            minLines: 1,
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) => _submit(),
+          ),
+        ),
+        const SizedBox(width: ViikshanaSpacing.sm),
+        FilledButton(
+          onPressed: _isPosting ? null : () => _submit(),
+          child: _isPosting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Post'),
+        ),
+      ],
     );
   }
 }

@@ -15,7 +15,8 @@ This file defines the build milestones and the gating protocol between Agent 1 (
 | M7 — Search + History | **DONE** |
 | M8 — Video Play Screen (Full Layout) | **Partial** |
 | M9 — Auth (Firebase) + Gating | **DONE** |
-| M10–M12 | Pending |
+| M10 — Engagement (Like/Comment/Subscribe) | **DONE** |
+| M11–M12 | Pending |
 
 ## Gating Protocol (MANDATORY)
 
@@ -166,6 +167,7 @@ Acceptance:
 - **Known limitations:** Firebase sign-in optional (fallback when API returns no tokens). Refresh token not yet used for token refresh flow.
 
 ### M10 — Engagement (Like/Comment/Subscribe)
+**Status: DONE**
 Deliverables:
 - Like/unlike
 - Comment/reply
@@ -173,6 +175,11 @@ Deliverables:
 Acceptance:
 - Auth required, optimistic UI OK, reconciles response
 - flutter analyze/test green
+
+**M10 summary (gating):**
+- **What changed:** API client: POST /api/videos/{id}/like, DELETE for remove like, POST /api/subscribe|unsubscribe/{channelId}, GET subscription check, POST /api/comments (videoId + text), POST /api/comments/reply. Models: LikeVideoResult, SubscribeResult; VideoDetail.likedByMe, ChannelMetadata.isSubscribed. Player screen: Like chip toggles like/removeLike and refreshes detail; Subscribe button calls subscribe/unsubscribe and refreshes; comment input (signed-in) posts via postComment and invalidates comments + detail. All engagement requires auth (Bearer token); 401/requiresLogin handled.
+- **How to test:** Sign in → open a video → tap Like (filled when liked), tap Subscribe (label becomes Subscribed), type a comment and Post → comment appears after refresh. Run `flutter analyze` and `flutter test`.
+- **Known limitations:** Dislike, Share, Download, Save, Thanks, Report remain stubs. Reply-to-comment UI not wired (API ready). Subscription status on load relies on video detail/channel.isSubscribed when API returns it.
 
 ### M11 — Upload (Mobile/Tablet Only)
 Deliverables:

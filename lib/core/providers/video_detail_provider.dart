@@ -1,8 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:viikshana/core/providers/home_feed_provider.dart';
 import 'package:viikshana/data/models/comment.dart';
 import 'package:viikshana/data/models/home_feed_response.dart';
 import 'package:viikshana/data/models/video_detail.dart';
+
+/// Channel IDs we optimistically treat as subscribed (after subscribe() success, until refetch).
+final optimisticSubscribedChannelIdsProvider = StateProvider<Set<String>>((ref) => <String>{});
 
 /// Loads video detail (including HLS URL) for playback.
 final videoDetailProvider =
