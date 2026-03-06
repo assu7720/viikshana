@@ -917,9 +917,12 @@ void main() {
 
     testWidgets('SearchScreen has AppBar title Search', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ViikshanaTheme.dark(),
-          home: const SearchScreen(),
+        ProviderScope(
+          overrides: kMockApiOverrides,
+          child: MaterialApp(
+            theme: ViikshanaTheme.dark(),
+            home: const SearchScreen(),
+          ),
         ),
       );
 

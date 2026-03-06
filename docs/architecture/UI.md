@@ -53,6 +53,45 @@ Advanced channel settings → redirect message to desktop.
 
 ---
 
+### Video play screen (target — reference: provided samples)
+
+Beyond playback-only: the screen should present full video context and engagement, consistent with the reference layouts (tablet/mobile).
+
+**Layout (below the player):**
+
+1. **Video info**
+   - Title (full or truncated with “…more”).
+   - Views count and relative time (e.g. “2 wk ago”, “4 hr ago”).
+   - Expandable description / hashtags (e.g. “#Tag …more”).
+
+2. **Channel row**
+   - Channel avatar/logo.
+   - Channel name.
+   - Subscriber count (e.g. “7.68 lakh”).
+   - **Subscribe** button (state: subscribed / not subscribed; auth required to change).
+
+3. **Engagement row** (icons + labels/counts)
+   - **Like** (thumbs-up) with count; **Dislike** (thumbs-down) with count if supported.
+   - **Share** (open system share / copy link; may not need backend).
+   - **Download** (if supported by backend).
+   - **Save** (add to saved/playlist; auth required).
+   - **Thanks** / tip (optional; auth + payment).
+   - **Report** (auth required).
+
+4. **Comments**
+   - Header: “Comments &lt;count&gt;” (from video detail).
+   - List of comments: avatar, author name, text, time, optional like/reply.
+   - Input: “Comment…” with post (auth required); support replies.
+
+5. **Related / recommended videos**
+   - List or grid of video cards (thumbnail, title, channel, views, duration, optional “LIVE”).
+   - Tapping opens that video (same play screen).
+   - On tablet: can be a right-hand rail; on phone: below comments.
+
+**Current state:** Only video playback is implemented. Above elements are the target; APIs and UI to be added per MILESTONES (e.g. M9 engagement, related-videos endpoint).
+
+---
+
 ## 2. ANDROID TV
 
 ### Navigation

@@ -12,7 +12,9 @@ This file defines the build milestones and the gating protocol between Agent 1 (
 | M4 — API Client + Models | **DONE** |
 | M5 — Home Screen (Anonymous) | **DONE** |
 | M6 — Video Player Core | **DONE** |
-| M7–M11 | Pending |
+| M7 — Search + History | **DONE** |
+| M8 — Video Play Screen (Full Layout) | Pending |
+| M9–M12 | Pending |
 
 ## Gating Protocol (MANDATORY)
 
@@ -108,14 +110,37 @@ Acceptance:
 - flutter analyze/test green
 
 ### M7 — Search + History
+**Status: DONE**
 Deliverables:
-- Debounced search (300–500ms)
-- Search history (max 10)
+- **Autocomplete while typing**: GET /search/suggestions?q=...&limit=8; show suggestions list (when search field has focus).
+- **On suggestion selected or Search submitted**: show video cards (same style as home) below search bar from GET /api/search/videos; suggestions are hidden when video results are shown.
+- When focus returns to search input: show suggestions again; when focus leaves and video results exist: show only video cards.
+- Debounced search (300–500ms).
+- Search history (max 10), persisted.
 Acceptance:
-- Search results visible, history persists
+- Typing shows autocomplete suggestions; selecting one or pressing Search shows video grid; refocusing search shows suggestions; history persists.
 - flutter analyze/test green
 
-### M8 — Auth (Firebase) + Gating
+**M7 summary (gating):**
+- **What changed:** Search tab: debounced autocomplete (GET /search/suggestions), video search on submit/select (GET /api/search/videos with `data` array). Focus-aware UI: suggestions when field focused, video grid when unfocused with results. Search history (max 10) in Hive. Parsing supports new API shape (SearchVideosResponse with `data`).
+- **How to test:** Open Search tab → type query (suggestions after ~400ms) → tap suggestion or press Search → video grid appears; tap search field again → suggestions show; history appears when empty. Run `flutter test` (140 tests) and `flutter analyze`.
+- **Known limitations:** None for M7 scope. Video search is single page (no pagination in UI yet).
+
+### M8 — Video Play Screen (Full Layout)
+**Status: Pending**
+Deliverables:
+- Video play screen layout per UI.md “Video play screen (target)” and reference designs:
+  - **Video info:** Title, views, relative time, expandable description/hashtags.
+  - **Channel row:** Avatar, channel name, subscriber count, Subscribe button (navigate to login or stub until M9).
+  - **Engagement row:** Like, Dislike (if API supported), Share, Download (if supported), Save, Thanks (optional), Report (stub or real); auth-gated actions show login prompt or placeholder until M9.
+  - **Comments:** Count from video detail; comments list (GET /api/videos/{videoId}/comments); “Comment…” input and reply UI (post/reply require auth; prompt login until M9).
+  - **Related / recommended:** List or grid of videos below (or right rail on tablet) from GET /api/videos/{id}/related or equivalent; tap opens same play screen.
+- Reuse existing playback (M6); no regression to fullscreen/controls/resume.
+Acceptance:
+- Video play screen shows full layout (info, channel, engagement row, comments, related); placeholders/stubs OK for auth-only actions and missing backend.
+- flutter analyze/test green
+
+### M9 — Auth (Firebase) + Gating
 Deliverables:
 - Email/password login
 - Anonymous restrictions enforced (like/comment/subscribe/upload)
@@ -123,7 +148,7 @@ Acceptance:
 - Restricted actions prompt login
 - flutter analyze/test green
 
-### M9 — Engagement (Like/Comment/Subscribe)
+### M10 — Engagement (Like/Comment/Subscribe)
 Deliverables:
 - Like/unlike
 - Comment/reply
@@ -132,7 +157,7 @@ Acceptance:
 - Auth required, optimistic UI OK, reconciles response
 - flutter analyze/test green
 
-### M10 — Upload (Mobile/Tablet Only)
+### M11 — Upload (Mobile/Tablet Only)
 Deliverables:
 - Auth check → channel check → pick/record video
 - Optional audio replacement UI (processing can be stub)
@@ -141,7 +166,7 @@ Acceptance:
 - Upload entry reachable only on mobile/tablet
 - flutter analyze/test green
 
-### M11 — Library (Logged-in)
+### M12 — Library (Logged-in)
 Deliverables:
 - Watched/Liked/Playlists/Saved/Notifications UI
 - Pagination + backend hooks where available

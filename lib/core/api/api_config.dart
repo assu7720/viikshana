@@ -12,7 +12,7 @@ class ApiConfig {
             );
 
   /// Default when no dart-define is set. Production API for all devices.
-  static const String _defaultBaseUrl = 'https://viikshana.com';
+  static const String _defaultBaseUrl = 'http://10.0.2.2:3000';
 
   /// Base URL for video thumbnails and video files (HLS, MP4). All media assets are served from this host.
   static const String mediaBaseUrl = 'https://videoprocess.viikshana.com';
@@ -37,6 +37,33 @@ class ApiConfig {
 
   Uri videoUrl(String id) {
     return Uri.parse(baseUrl).replace(path: videoPath(id));
+  }
+
+  /// GET /search/suggestions?q=...&limit=8
+  String get searchSuggestionsPath => '/search/suggestions';
+
+  Uri searchSuggestionsUrl(String q, {int limit = 8}) {
+    return Uri.parse(baseUrl).replace(
+      path: searchSuggestionsPath,
+      queryParameters: {
+        'q': q,
+        'limit': limit.clamp(1, 100).toString(),
+      },
+    );
+  }
+
+  /// GET /api/search/videos?q=... (video search; same response shape as home feed).
+  String get searchVideosPath => '/api/search/videos';
+
+  Uri searchVideosUrl(String q, {int page = 1, int limit = 20}) {
+    return Uri.parse(baseUrl).replace(
+      path: searchVideosPath,
+      queryParameters: {
+        'q': q,
+        'page': page.toString(),
+        'limit': limit.clamp(1, 100).toString(),
+      },
+    );
   }
 
   /// Resolves a thumbnail or video URL. If [urlOrPath] is relative (starts with /), prepends [mediaBaseUrl].

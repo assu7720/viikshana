@@ -28,6 +28,23 @@ void main() {
       expect(uri.path, '/videos/vid-123');
     });
 
+    test('searchVideosUrl includes q, page, limit', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      final uri = config.searchVideosUrl('hello', page: 1, limit: 20);
+      expect(uri.path, '/api/search/videos');
+      expect(uri.queryParameters['q'], 'hello');
+      expect(uri.queryParameters['page'], '1');
+      expect(uri.queryParameters['limit'], '20');
+    });
+
+    test('searchSuggestionsUrl includes q and limit', () {
+      final config = ApiConfig(baseUrl: 'https://api.test');
+      final uri = config.searchSuggestionsUrl('tel', limit: 8);
+      expect(uri.path, '/search/suggestions');
+      expect(uri.queryParameters['q'], 'tel');
+      expect(uri.queryParameters['limit'], '8');
+    });
+
     test('resolveMediaUrl returns full URL unchanged', () {
       const full = 'https://videoprocess.viikshana.com/processed/abc/thumb.jpg';
       expect(ApiConfig.resolveMediaUrl(full), full);
@@ -159,6 +176,99 @@ void main() {
         () => client.getHomeFeed(),
         throwsA(isA<ApiException>()),
       );
+    });
+
+    test('searchVideos in mock mode returns empty list', () async {
+      final client = ApiClient(config: ApiConfig(baseUrl: ''));
+      final result = await client.searchVideos('test');
+      expect(result.videos, isEmpty);
+      expect(result.page, 1);
+    });
+
+    test('getSearchSuggestions returns empty for empty query', () async {
+      final client = ApiClient(config: ApiConfig(baseUrl: 'https://test'));
+      final result = await client.getSearchSuggestions('');
+      expect(result, isEmpty);
+    });
+
+    test('getSearchSuggestions in mock mode returns empty', () async {
+      final client = ApiClient(config: ApiConfig(baseUrl: ''));
+      final result = await client.getSearchSuggestions('tel');
+      expect(result, isEmpty);
+    });
+
+    test('getSearchSuggestions parses array response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.url.queryParameters['q'], 'tel');
+        return http.Response(jsonEncode(['telugu', 'telugu songs', 'telugu movies']), 200);
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://test'),
+        client: mockClient,
+      );
+      final result = await client.getSearchSuggestions('tel', limit: 8);
+      expect(result, ['telugu', 'telugu songs', 'telugu movies']);
+    });
+
+    test('getSearchSuggestions parses object with suggestions key', () async {
+      final mockClient = _MockClient((_) async {
+        return http.Response(
+          jsonEncode({'suggestions': ['a', 'b']}),
+          200,
+        );
+      });
+      final client = ApiClient(
+        config: ApiConfig(baseUrl: 'https://test'),
+        client: mockClient,
+      );
+      final result = await client.getSearchSuggestions('x');
+      expect(result, ['a', 'b']);
+    });
+
+    test('searchVideos parses success response', () async {
+      final mockClient = _MockClient((request) async {
+        expect(request.url.queryParameters['q'], 'query');
+        return http.Response(
+          jsonEncode({
+            'videos': [
+              {'id': 's1', 'title': 'Search Result'}
+            ],
+            'page': 1,
+            'limit': 20,
+            'hasMore': false,
+          }),
+          200,
+        );
+      });
+      final client = ApiClient(client: mockClient);
+      final result = await client.searchVideos('query');
+      expect(result.videos.length, 1);
+      expect(result.videos.first.id, 's1');
+      expect(result.videos.first.title, 'Search Result');
+    });
+
+    test('searchVideos parses SearchVideosResponse with data array (new API)', () async {
+      final mockClient = _MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': [
+              {'id': 'v1', 'title': 'Video One', 'views': 100},
+              {'id': 'v2', 'title': 'Video Two', 'views': 200},
+            ],
+            'hasMore': false,
+            'nextPage': null,
+          }),
+          200,
+        );
+      });
+      final client = ApiClient(client: mockClient);
+      final result = await client.searchVideos('q');
+      expect(result.videos.length, 2);
+      expect(result.videos[0].id, 'v1');
+      expect(result.videos[0].title, 'Video One');
+      expect(result.videos[1].id, 'v2');
+      expect(result.hasMore, false);
     });
   });
 }

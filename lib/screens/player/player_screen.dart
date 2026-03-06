@@ -22,7 +22,6 @@ class PlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
-  VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _fullScreenListenerAttached = false;
   StateController<bool>? _fullScreenNotifier;
@@ -104,7 +103,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       onControllersReady: (video, chewie) {
         if (!_fullScreenListenerAttached && chewie != null) {
           _fullScreenListenerAttached = true;
-          _videoController = video;
           _chewieController = chewie;
           chewie.addListener(_onChewieUpdate);
           _onChewieUpdate();

@@ -65,6 +65,64 @@ class ApiClient {
     return VideoDetail.fromJson(videoMap);
   }
 
+  /// GET /search/suggestions?q=...&limit=8
+  /// Returns list of suggestion strings. Parses array or { suggestions: [] } or { data: [] }.
+  Future<List<String>> getSearchSuggestions(String q, {int limit = 8}) async {
+    if (q.trim().isEmpty) return [];
+    if (_config.isMock) {
+      if (kDebugMode) debugPrint('[API] getSearchSuggestions (mock): no network call');
+      return [];
+    }
+    final uri = _config.searchSuggestionsUrl(q.trim(), limit: limit);
+    if (kDebugMode) debugPrint('[API] OUTGOING: GET $uri');
+    final response = await _request(() => _client.get(uri));
+    if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
+    final list = _parseSuggestionsResponse(response);
+    if (kDebugMode) debugPrint('[API] getSearchSuggestions returned: ${list.length}');
+    return list;
+  }
+
+  List<String> _parseSuggestionsResponse(http.Response response) {
+    final body = response.body.trim();
+    if (body.isEmpty) return [];
+    final decoded = jsonDecode(body);
+    if (decoded is List) {
+      return decoded
+          .map((e) => e?.toString().trim())
+          .where((s) => s != null && s.isNotEmpty)
+          .cast<String>()
+          .toList();
+    }
+    if (decoded is Map<String, dynamic>) {
+      final raw = decoded['suggestions'] ?? decoded['data'] ?? decoded['results'];
+      if (raw is List) {
+        return raw
+            .map((e) => e?.toString().trim())
+            .where((s) => s != null && s.isNotEmpty)
+            .cast<String>()
+            .toList();
+      }
+    }
+    return [];
+  }
+
+  /// GET /api/search/videos?q=...
+  /// Returns same shape as home feed (regularVideos / videos, hasMore, nextPage).
+  /// When [ApiConfig.isMock] is true, returns empty results without network.
+  Future<HomeFeedResponse> searchVideos(String q, {int page = 1, int limit = 20}) async {
+    if (_config.isMock) {
+      if (kDebugMode) debugPrint('[API] searchVideos (mock): no network call');
+      return HomeFeedResponse(videos: const [], page: page, limit: limit);
+    }
+    final uri = _config.searchVideosUrl(q, page: page, limit: limit);
+    if (kDebugMode) debugPrint('[API] OUTGOING: GET $uri');
+    final response = await _request(() => _client.get(uri));
+    if (kDebugMode) debugPrint('[API] RESPONSE: ${response.statusCode} ${uri.path}');
+    final result = _parseJson(response, HomeFeedResponse.fromJson);
+    if (kDebugMode) debugPrint('[API] searchVideos returned: ${result.videos.length} (page=$page)');
+    return result;
+  }
+
   Future<http.Response> _request(Future<http.Response> Function() call) async {
     int attempt = 0;
     while (true) {
