@@ -12,7 +12,7 @@ class ApiConfig {
             );
 
   /// Default when no dart-define is set. Production API for all devices.
-  static const String _defaultBaseUrl = 'http://10.0.2.2:3000';
+  static const String _defaultBaseUrl = 'https://viikshana.com';
 
   /// Base URL for video thumbnails and video files (HLS, MP4). All media assets are served from this host.
   static const String mediaBaseUrl = 'https://videoprocess.viikshana.com';

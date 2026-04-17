@@ -33,16 +33,18 @@ class VideoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                    Text(
-                      video.title,
-                      style: theme.textTheme.titleSmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: ViikshanaSpacing.xs),
-                    Row(
+                      Expanded(
+                        child: Text(
+                          video.title,
+                          style: theme.textTheme.titleSmall,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: ViikshanaSpacing.xs),
+                      Row(
                       children: [
-                        if (video.channelName != null)
+                        if (video.channelName != null && video.channelName!.isNotEmpty)
                           Expanded(
                             child: Text(
                               video.channelName!,
@@ -52,7 +54,7 @@ class VideoCard extends StatelessWidget {
                             ),
                           ),
                         if (video.viewCount > 0) ...[
-                          if (video.channelName != null)
+                          if (video.channelName != null && video.channelName!.isNotEmpty)
                             Text(
                               ' • ',
                               style: theme.textTheme.bodySmall,
@@ -95,7 +97,7 @@ class _Thumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: url != null && url!.isNotEmpty
+      child: (url?.isNotEmpty == true)
           ? Image.network(
               url!,
               fit: BoxFit.cover,

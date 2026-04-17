@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateController;
 import 'package:video_player/video_player.dart';
 import 'package:viikshana/core/auth/auth_provider.dart';
+import 'package:viikshana/core/providers/home_feed_provider.dart';
 import 'package:viikshana/core/providers/player_providers.dart';
 import 'package:viikshana/core/providers/video_detail_provider.dart';
-import 'package:viikshana/core/providers/home_feed_provider.dart';
 import 'package:viikshana/core/api/api_config.dart';
 import 'package:viikshana/core/api/api_exception.dart';
 import 'package:viikshana/core/watch_history/watch_history_repository.dart';
@@ -35,6 +35,20 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   bool _fullScreenListenerAttached = false;
   StateController<bool>? _fullScreenNotifier;
   WatchHistoryRepository? _watchHistoryRepo;
+  /// Preserves video player state when layout switches (e.g. tablet portrait ↔ landscape).
+  GlobalKey<_VideoPlayerContentState> _playerContentKey =
+      GlobalKey<_VideoPlayerContentState>();
+
+  @override
+  void didUpdateWidget(PlayerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoId != widget.videoId) {
+      _chewieController?.removeListener(_onChewieUpdate);
+      _chewieController = null;
+      _fullScreenListenerAttached = false;
+      _playerContentKey = GlobalKey<_VideoPlayerContentState>();
+    }
+  }
 
   @override
   void dispose() {
@@ -44,10 +58,26 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   }
 
   void _onChewieUpdate() {
-    final chewie = _chewieController;
-    if (chewie == null) return;
-    final isFullScreen = chewie.isFullScreen;
-    _fullScreenNotifier?.state = isFullScreen;
+    _syncShellBottomNav();
+  }
+
+  /// [MobileShell] hides its bottom [NavigationBar] when this is true (Chewie fullscreen or phone landscape player).
+  void _syncShellBottomNav() {
+    if (!mounted) return;
+    _fullScreenNotifier ??= ref.read(fullScreenPlayerProvider.notifier);
+    final size = MediaQuery.sizeOf(context);
+    final orientation = MediaQuery.orientationOf(context);
+    final isTablet = size.shortestSide >= 600;
+    final landscape = orientation == Orientation.landscape;
+    final detailReady = ref.read(videoDetailProvider(widget.videoId)).hasValue;
+    final immersivePhoneLandscape = !isTablet && landscape && detailReady;
+    // Do not call [exitFullScreen] when landscape becomes true: Chewie’s own fullscreen forces landscape
+    // for wide videos, which would match “immersive + fullscreen” and pop the route immediately.
+    final chewieFull = _chewieController?.isFullScreen ?? false;
+    final hide = chewieFull || immersivePhoneLandscape;
+    if (_fullScreenNotifier!.state != hide) {
+      _fullScreenNotifier!.state = hide;
+    }
   }
 
   @override
@@ -55,18 +85,37 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _fullScreenNotifier ??= ref.read(fullScreenPlayerProvider.notifier);
     _watchHistoryRepo ??= ref.read(watchHistoryRepositoryProvider);
     final detailAsync = ref.watch(videoDetailProvider(widget.videoId));
+    final size = MediaQuery.sizeOf(context);
+    final orientation = MediaQuery.orientationOf(context);
+    final isTablet = size.shortestSide >= 600;
+    final isTabletLandscape =
+        isTablet && orientation == Orientation.landscape;
+    final isMobileLandscape =
+        !isTablet && orientation == Orientation.landscape;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncShellBottomNav();
+    });
 
     return detailAsync.when(
-      data: (detail) => Scaffold(
-        appBar: AppBar(
-          title: Text(detail.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
-        body: _buildPlayer(detail),
-      ),
+      data: (detail) {
+        // One [Scaffold] for loaded detail so orientation changes don’t swap the whole route shell
+        // (avoids disposing/recreating Chewie’s [PlayerNotifier] mid-fullscreen — chewie#857).
+        return Scaffold(
+          appBar: isMobileLandscape
+              ? null
+              : AppBar(
+                  title: Text(detail.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+          body: isMobileLandscape
+              ? _buildMobileLandscapeFullscreen(detail)
+              : _buildPlayer(detail, isTabletLayout: isTabletLandscape),
+        );
+      },
       loading: () => Scaffold(
         appBar: AppBar(title: const Text('Video'), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).pop())),
         body: const Center(child: CircularProgressIndicator()),
@@ -90,24 +139,42 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     );
   }
 
-  Widget _buildPlayer(VideoDetail detail) {
+  /// Phone landscape: edge-to-edge video, same [GlobalKey] player as portrait (no reload).
+  Widget _buildMobileLandscapeFullscreen(VideoDetail detail) {
     final hlsUrl = detail.hlsUrl?.trim() ?? '';
     if (hlsUrl.isEmpty) {
-      return Center(
-        child: Text(
-          'No playable stream',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: Text(
+              'No playable stream',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.paddingOf(context).top,
+            left: 0,
+            child: SafeArea(
+              bottom: false,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ],
       );
     }
-
     final startAt = _getStartPosition();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
+        ColoredBox(
+          color: Colors.black,
           child: _VideoPlayerContent(
+            key: _playerContentKey,
+            fillViewport: true,
             videoId: widget.videoId,
             hlsUrl: hlsUrl,
             startAt: startAt,
@@ -124,10 +191,95 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             },
           ),
         ),
+        Positioned(
+          top: MediaQuery.paddingOf(context).top,
+          left: 0,
+          child: SafeArea(
+            bottom: false,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black45,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// [isTabletLayout]: tablet landscape only — video left, related right.
+  Widget _buildPlayer(VideoDetail detail, {bool isTabletLayout = false}) {
+    final hlsUrl = detail.hlsUrl?.trim() ?? '';
+    if (hlsUrl.isEmpty) {
+      return Center(
+        child: Text(
+          'No playable stream',
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      );
+    }
+
+    final startAt = _getStartPosition();
+    final videoBlock = AspectRatio(
+      aspectRatio: 16 / 9,
+      child: _VideoPlayerContent(
+        key: _playerContentKey,
+        fillViewport: false,
+        videoId: widget.videoId,
+        hlsUrl: hlsUrl,
+        startAt: startAt,
+        onSavePosition: (positionSeconds) {
+          _watchHistoryRepo?.setPosition(widget.videoId, positionSeconds);
+        },
+        onControllersReady: (video, chewie) {
+          if (!_fullScreenListenerAttached && chewie != null) {
+            _fullScreenListenerAttached = true;
+            _chewieController = chewie;
+            chewie.addListener(_onChewieUpdate);
+            _onChewieUpdate();
+          }
+        },
+      ),
+    );
+
+    if (isTabletLayout) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                videoBlock,
+                Expanded(
+                  child: _PlayerBodyContent(
+                    videoId: widget.videoId,
+                    detail: detail,
+                    showRelatedOnRight: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 360,
+            child: _RelatedVideosColumn(videoId: widget.videoId),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        videoBlock,
         Expanded(
           child: _PlayerBodyContent(
             videoId: widget.videoId,
             detail: detail,
+            showRelatedOnRight: false,
           ),
         ),
       ],
@@ -164,10 +316,15 @@ String _formatSubscribers(int? count) {
 }
 
 class _PlayerBodyContent extends ConsumerWidget {
-  const _PlayerBodyContent({required this.videoId, required this.detail});
+  const _PlayerBodyContent({
+    required this.videoId,
+    required this.detail,
+    this.showRelatedOnRight = false,
+  });
 
   final String videoId;
   final VideoDetail detail;
+  final bool showRelatedOnRight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -210,9 +367,9 @@ class _PlayerBodyContent extends ConsumerWidget {
                 Text(_relativeTime(detail.publishedAt), style: theme.textTheme.bodySmall),
             ],
           ),
-          if (detail.description != null && detail.description!.isNotEmpty) ...[
+          if (detail.description != null && detail.description!.trim().isNotEmpty) ...[
             const SizedBox(height: ViikshanaSpacing.sm),
-            _ExpandableDescription(text: detail.description!),
+            _ExpandableDescription(text: detail.description!.trim()),
           ],
           const SizedBox(height: ViikshanaSpacing.md),
           _ChannelRow(
@@ -319,6 +476,7 @@ class _PlayerBodyContent extends ConsumerWidget {
               ref.invalidate(videoDetailProvider(videoId));
             },
           ),
+          if (!showRelatedOnRight) ...[
           const SizedBox(height: ViikshanaSpacing.lg),
           SectionHeader(title: 'Related'),
           const SizedBox(height: ViikshanaSpacing.sm),
@@ -334,6 +492,7 @@ class _PlayerBodyContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: ViikshanaSpacing.xl),
+          ],
         ],
       ),
     );
@@ -744,8 +903,88 @@ class _RelatedVideosGrid extends StatelessWidget {
   }
 }
 
+/// Tablet right column: related videos only.
+class _RelatedVideosColumn extends ConsumerWidget {
+  const _RelatedVideosColumn({required this.videoId});
+  final String videoId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final relatedAsync = ref.watch(relatedVideosProvider(videoId));
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(ViikshanaSpacing.md, ViikshanaSpacing.sm, ViikshanaSpacing.md, ViikshanaSpacing.xs),
+          child: SectionHeader(title: 'Related'),
+        ),
+        Expanded(
+          child: relatedAsync.when(
+            data: (res) {
+              final list = res.videos.where((v) => v.id != videoId).toList();
+              if (list.isEmpty) {
+                return Center(
+                  child: Text('No related videos.', style: theme.textTheme.bodySmall),
+                );
+              }
+              return _RelatedVideosList(videos: list, currentVideoId: videoId);
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(ViikshanaSpacing.md),
+                child: Text('Related videos unavailable', style: theme.textTheme.bodySmall),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RelatedVideosList extends StatelessWidget {
+  const _RelatedVideosList({required this.videos, required this.currentVideoId});
+  final List<VideoItem> videos;
+  final String currentVideoId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (videos.isEmpty) {
+      return Center(
+        child: Text('No related videos.', style: Theme.of(context).textTheme.bodySmall),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: ViikshanaSpacing.md),
+      itemCount: videos.length,
+      itemBuilder: (context, index) {
+        final vid = videos[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: ViikshanaSpacing.sm),
+          child: SizedBox(
+            height: 240,
+            child: VideoCard(
+              video: vid,
+              onTap: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute<void>(builder: (_) => PlayerScreen(videoId: vid.id)),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _VideoPlayerContent extends StatefulWidget {
   const _VideoPlayerContent({
+    super.key,
+    this.fillViewport = false,
     required this.videoId,
     required this.hlsUrl,
     required this.startAt,
@@ -753,6 +992,8 @@ class _VideoPlayerContent extends StatefulWidget {
     required this.onControllersReady,
   });
 
+  /// When true, video is sized to cover the parent (e.g. phone landscape fullscreen).
+  final bool fillViewport;
   final String videoId;
   final String hlsUrl;
   final Duration startAt;
@@ -770,11 +1011,21 @@ class _VideoPlayerContentState extends State<_VideoPlayerContent> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   String? _error;
+  /// Keeps [ChewieState] (and its [PlayerNotifier]) across layout changes (portrait ↔ landscape).
+  final GlobalKey _chewieWidgetKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _initPlayer();
+  }
+
+  @override
+  void didUpdateWidget(_VideoPlayerContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fillViewport != widget.fillViewport) {
+      setState(() {});
+    }
   }
 
   Future<void> _initPlayer() async {
@@ -849,12 +1100,75 @@ class _VideoPlayerContentState extends State<_VideoPlayerContent> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final aspectRatio = chewie.aspectRatio ?? 16 / 9;
-    return Center(
-      child: AspectRatio(
-        aspectRatio: aspectRatio,
-        child: Chewie(controller: chewie),
-      ),
+    final aspectRatio = (chewie.aspectRatio ?? 16 / 9).clamp(0.5, 3.0);
+
+    if (!widget.fillViewport) {
+      return Center(
+        child: AspectRatio(
+          aspectRatio: aspectRatio,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return _ChewieLocalMediaQuery(
+                maxWidth: constraints.maxWidth,
+                maxHeight: constraints.maxHeight,
+                child: Chewie(key: _chewieWidgetKey, controller: chewie),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // Letterbox to viewport; Chewie must see local [MediaQuery] size (not full screen) or controls mis-layout.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth;
+        final maxH = constraints.maxHeight;
+        if (maxW <= 0 || maxH <= 0) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        var w = maxW;
+        var h = w / aspectRatio;
+        if (h > maxH) {
+          h = maxH;
+          w = h * aspectRatio;
+        }
+        return Center(
+          child: SizedBox(
+            width: w,
+            height: h,
+            child: _ChewieLocalMediaQuery(
+              maxWidth: w,
+              maxHeight: h,
+              child: Chewie(key: _chewieWidgetKey, controller: chewie),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Chewie's [PlayerWithControls] sizes its inner [AspectRatio] from [MediaQuery.size] (full window).
+/// Override size to the actual player bounds so controls and video lay out correctly when embedded.
+class _ChewieLocalMediaQuery extends StatelessWidget {
+  const _ChewieLocalMediaQuery({
+    required this.maxWidth,
+    required this.maxHeight,
+    required this.child,
+  });
+
+  final double maxWidth;
+  final double maxHeight;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = maxWidth.clamp(1.0, double.infinity);
+    final h = maxHeight.clamp(1.0, double.infinity);
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(size: Size(w, h)),
+      child: child,
     );
   }
 }
